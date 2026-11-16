@@ -20,8 +20,9 @@ El navegador solo habla con el frontend. Nginx reenvía `/api/…` al backend po
 | Repositorio | https://github.com/facucabrerautn-maker/libreria-backend |
 | Rama desplegada | `main` |
 | Commit desplegado | _(hash corto)_ |
-| Proyecto de Easypanel | _(nombre del proyecto)_ |
-| Nombre interno del backend | _(por ejemplo `grupoN_backend`)_ |
+| Proyecto de Easypanel | `libreria` |
+| Nombre interno del backend | `libreria_backend` |
+| `API_UPSTREAM` del frontend | `libreria_backend:8000` |
 | Fecha del último despliegue | _(dd/mm/aaaa)_ |
 
 ## Rutas y puertos
