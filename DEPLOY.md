@@ -15,8 +15,8 @@ El navegador solo habla con el frontend. Nginx reenvía `/api/…` al backend po
 
 | Dato | Valor |
 |------|-------|
-| Grupo | _(número de grupo)_ |
-| URL pública (frontend, HTTPS) | _(https://…)_ |
+| Grupo | 7 — «Necesitamos Gente» |
+| URL pública (frontend, HTTPS) | https://libreria.devfacu.me/ |
 | Repositorio | https://github.com/facucabrerautn-maker/libreria-backend |
 | Rama desplegada | `main` |
 | Commit desplegado | _(hash corto)_ |

@@ -3,8 +3,9 @@
 # Se ejecutan contra la aplicación integrada: el frontend (Nginx) reenvía
 # /api/ al backend, por eso todas las rutas llevan el prefijo /api.
 #
-# Cambiar `base` por la URL pública antes de grabar la evidencia, por ejemplo:
-#   @base = https://<dominio-del-frontend>/api
+# Para probar en local, usar:
+#   @base = http://127.0.0.1:8080/api
+# Para grabar la evidencia se usa la URL pública (grupo 7).
 #
 # Datos de partida: `python -m scripts.seed` (ver README.md). Ids previsibles:
 #   editoriales 1 (Editorial Sudamericana) y 2 (Anagrama)
@@ -14,7 +15,7 @@
 #   clientes    1 (Ana Gómez), 2 (Tomás Ríos)
 # Usar solo datos ficticios.
 
-@base = http://127.0.0.1:8080/api
+@base = https://libreria.devfacu.me/api
 
 
 ### Salud a través del proxy (200)

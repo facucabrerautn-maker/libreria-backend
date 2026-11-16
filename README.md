@@ -7,8 +7,8 @@ Aplicación web para una librería de barrio que gestiona su catálogo de libros
 
 ## Grupo
 
-- Grupo: _(completar número de grupo)_
-- URL pública: _(completar; ver `DEPLOY.md`)_
+- Grupo: 7 — «Necesitamos Gente»
+- URL pública: https://libreria.devfacu.me/ (detalles del despliegue en `DEPLOY.md`)
 
 ## Integrantes
 
