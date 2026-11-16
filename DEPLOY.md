@@ -6,9 +6,10 @@
 
 ## Imagen Docker
 
-La imagen se construye con:
+La imagen del backend se construye desde la carpeta `backend/` (en Easypanel, Build Path `/backend`):
 
 ```bash
+cd backend
 docker build -t libreria .
 ```
 
@@ -18,6 +19,9 @@ docker build -t libreria .
 docker run -d --name libreria -p <puerto>:8000 --restart unless-stopped \
   --env-file .env libreria
 ```
+
+El `.env` es el archivo del servidor (no se versiona); `backend/.env.example` muestra su forma.
+Las tablas se crean al arrancar con `create_all`; no hay migraciones ni Alembic.
 
 - `-p <puerto>:8000` publica solo la aplicación en el puerto asignado.
 - `--restart unless-stopped` hace que Docker vuelva a levantar el contenedor si termina.
