@@ -1,6 +1,14 @@
 # Librería — API de Catálogo y Ventas
 
-API REST asíncrona para una librería de barrio que gestiona su catálogo de libros y sus ventas. Desarrollado como parcial de Programación III (Unidades 1 a 4).
+Aplicación web para una librería de barrio que gestiona su catálogo de libros, sus clientes y sus ventas. Desarrollada para Programación III (Tecnicatura Universitaria en Programación, UTN):
+
+- **Backend** (`backend/`): API REST asíncrona con FastAPI y PostgreSQL (parcial, Unidades 1 a 4).
+- **Frontend** (`frontend/`): pantallas en HTML, CSS y JavaScript nativos conectadas a la API (Evaluación Global), servidas por Nginx dentro de una imagen Docker.
+
+## Grupo
+
+- Grupo: _(completar número de grupo)_
+- URL pública: _(completar; ver `DEPLOY.md`)_
 
 ## Integrantes
 
@@ -55,6 +63,45 @@ docker exec libreria python -m scripts.seed
 ```
 
 Requiere `DATABASE_URL` en el entorno o en el archivo `.env`.
+
+## Frontend y aplicación integrada
+
+El frontend usa HTML, CSS y JavaScript nativos, sin dependencias. Todas las peticiones salen de `frontend/public/js/api.js` con `fetch` y la base `/api`; Nginx reenvía `/api/` al backend (`frontend/default.conf.template`), de modo que `/api/libros/` llega a FastAPI como `/libros/`.
+
+Pantallas: Catálogo, Libros (alta), Clientes (alta y consulta por id), Ventas (borrador y confirmación) e Historial.
+
+Contrato con la API: el alta de libros envía `stock` y `autores` (`autor_id`, `rol`, `orden`). Para seleccionar autores y clientes se usan las consultas individuales `GET /autores/{id}` y `GET /clientes/{id}`, porque la API no expone listados de ambos. El borrador de la venta se guarda en memoria; los importes confirmados vienen siempre de la API.
+
+### Probar todo en local
+
+1. Backend (desde `backend/`, con `DATABASE_URL` en el `.env`):
+
+   ```bash
+   uvicorn app.main:app --host 0.0.0.0 --port 8000
+   python -m scripts.seed
+   ```
+
+2. Frontend (desde `frontend/`, con Docker iniciado):
+
+   ```bash
+   docker build -t libreria-frontend .
+   docker run --rm --name libreria-frontend \
+     -p 127.0.0.1:8080:80 \
+     --add-host=host.docker.internal:host-gateway \
+     -e API_UPSTREAM=host.docker.internal:8000 libreria-frontend
+   ```
+
+   En Docker Desktop se omite `--add-host`. `API_UPSTREAM` tiene la forma `host:puerto`, sin `http://` ni barra final.
+
+3. Abrir `http://127.0.0.1:8080` y comprobar que `http://127.0.0.1:8080/api/health/ready` responde `200`.
+
+Los pasos de despliegue en Easypanel, las variables y la verificación están en [`DEPLOY.md`](DEPLOY.md).
+
+## Pruebas y evidencia
+
+- `backend/test/*.http`: casos por módulo del parcial.
+- `backend/test/global.http`: casos G-01 a G-07 del Global, pensados para ejecutarse desde la URL pública con datos ficticios (cambiar la variable `base`).
+- `evidencias/`: capturas y registros de los casos. Las imágenes `D-*` y los archivos `C-07_*` corresponden al parcial; la evidencia del Global se agrega con el prefijo `G-`.
 
 ## Estructura del proyecto
 

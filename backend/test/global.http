@@ -1,0 +1,232 @@
+# Casos de prueba del Global (G-01 a G-07) — Programación III.
+#
+# Se ejecutan contra la aplicación integrada: el frontend (Nginx) reenvía
+# /api/ al backend, por eso todas las rutas llevan el prefijo /api.
+#
+# Cambiar `base` por la URL pública antes de grabar la evidencia, por ejemplo:
+#   @base = https://<dominio-del-frontend>/api
+#
+# Datos de partida: `python -m scripts.seed` (ver README.md). Ids previsibles:
+#   editoriales 1 (Editorial Sudamericana) y 2 (Anagrama)
+#   géneros     1 (Novela) y 2 (Cuento)
+#   autores     1 (Julio Cortázar), 2 (Jorge Luis Borges), 3 (Ricardo Piglia)
+#   libros      1 Rayuela, 2 Bestiario, 3 Ficciones, 4 Respiración artificial
+#   clientes    1 (Ana Gómez), 2 (Tomás Ríos)
+# Usar solo datos ficticios.
+
+@base = http://127.0.0.1:8080/api
+
+
+### Salud a través del proxy (200)
+GET {{base}}/health/ready
+
+
+# ---------------------------------------------------------------------------
+# G-01 · Catálogo
+# ---------------------------------------------------------------------------
+
+### G-01 · Listado inicial (200, hasta 20 libros)
+GET {{base}}/libros/
+
+### G-01 · Búsqueda parcial por título, sin distinguir mayúsculas (200)
+GET {{base}}/libros/?titulo=rayu
+
+### G-01 · Paginación: primera página de 2 libros (200)
+GET {{base}}/libros/?limit=2&offset=0
+
+### G-01 · Paginación: segunda página de 2 libros (200)
+GET {{base}}/libros/?limit=2&offset=2
+
+### G-01 · Búsqueda sin coincidencias (200, lista vacía)
+GET {{base}}/libros/?titulo=zzzz-no-existe
+
+### G-01 · Detalle de un libro con sus autores (200)
+GET {{base}}/libros/1
+
+
+# ---------------------------------------------------------------------------
+# G-02 · Alta de libro
+# ---------------------------------------------------------------------------
+
+### G-02 · Opciones de editorial y género para el formulario (200)
+GET {{base}}/editoriales/
+
+###
+GET {{base}}/generos/
+
+### G-02 · Verificar un autor antes de agregarlo (200)
+GET {{base}}/autores/1
+
+### G-02 · Crear libro con stock, género opcional y autorías (201)
+POST {{base}}/libros/
+Content-Type: application/json
+
+{
+  "isbn": "978-950-00-0200-1",
+  "titulo": "Libro de prueba del Global",
+  "precio": "15000.00",
+  "stock": 3,
+  "editorial_id": 1,
+  "genero_id": null,
+  "autores": [
+    { "autor_id": 1, "rol": "autor", "orden": 1 },
+    { "autor_id": 2, "rol": "traductor", "orden": 2 }
+  ]
+}
+
+### G-02 · Consultar el detalle del libro creado (sustituir el id devuelto)
+GET {{base}}/libros/5
+
+### G-02 · Repetir el ISBN (409)
+POST {{base}}/libros/
+Content-Type: application/json
+
+{
+  "isbn": "978-950-00-0200-1",
+  "titulo": "ISBN repetido",
+  "precio": "15000.00",
+  "stock": 1,
+  "editorial_id": 1,
+  "autores": [
+    { "autor_id": 1, "rol": "autor", "orden": 1 }
+  ]
+}
+
+
+# ---------------------------------------------------------------------------
+# G-03 · Alta de cliente
+# ---------------------------------------------------------------------------
+
+### G-03 · Crear cliente (201)
+POST {{base}}/clientes/
+Content-Type: application/json
+
+{
+  "nombre": "Cliente de prueba del Global",
+  "email": "global.prueba@example.com"
+}
+
+### G-03 · Recuperar el cliente por id (sustituir el id devuelto)
+GET {{base}}/clientes/3
+
+### G-03 · Repetir el email (409)
+POST {{base}}/clientes/
+Content-Type: application/json
+
+{
+  "nombre": "Otro nombre",
+  "email": "global.prueba@example.com"
+}
+
+
+# ---------------------------------------------------------------------------
+# G-04 · Venta
+# ---------------------------------------------------------------------------
+
+### G-04 · Venta válida con dos renglones (201)
+# Respuesta esperada: precio_unitario copiado del catálogo, subtotales y total
+# calculados por el servidor. Con los datos del seed el total es 77000.00.
+POST {{base}}/ventas/
+Content-Type: application/json
+
+{
+  "cliente_id": 2,
+  "renglones": [
+    { "libro_id": 1, "cantidad": 2 },
+    { "libro_id": 4, "cantidad": 1 }
+  ]
+}
+
+### G-04 · Detalle de la venta, también después de recargar la página (200)
+GET {{base}}/ventas/1
+
+### G-04 · Historial paginado (200)
+GET {{base}}/ventas/?limit=20&offset=0
+
+
+# ---------------------------------------------------------------------------
+# G-05 · Precio histórico
+# ---------------------------------------------------------------------------
+
+### G-05 · Cambiar el precio del libro 1 (200)
+PATCH {{base}}/libros/1
+Content-Type: application/json
+
+{
+  "precio": "30000.00"
+}
+
+### G-05 · La venta anterior conserva sus importes (precio_unitario 25000.00)
+GET {{base}}/ventas/1
+
+### G-05 · Una venta nueva usa el precio nuevo (precio_unitario 30000.00)
+POST {{base}}/ventas/
+Content-Type: application/json
+
+{
+  "cliente_id": 1,
+  "renglones": [
+    { "libro_id": 1, "cantidad": 1 }
+  ]
+}
+
+
+# ---------------------------------------------------------------------------
+# G-06 · Rechazo (el historial queda igual)
+# ---------------------------------------------------------------------------
+
+### G-06 · Cliente inexistente (409)
+POST {{base}}/ventas/
+Content-Type: application/json
+
+{
+  "cliente_id": 999,
+  "renglones": [
+    { "libro_id": 1, "cantidad": 1 }
+  ]
+}
+
+### G-06 · Libro inexistente (409)
+POST {{base}}/ventas/
+Content-Type: application/json
+
+{
+  "cliente_id": 1,
+  "renglones": [
+    { "libro_id": 999, "cantidad": 1 }
+  ]
+}
+
+### G-06 · Renglones con el mismo libro repetido (422)
+POST {{base}}/ventas/
+Content-Type: application/json
+
+{
+  "cliente_id": 1,
+  "renglones": [
+    { "libro_id": 1, "cantidad": 1 },
+    { "libro_id": 1, "cantidad": 2 }
+  ]
+}
+
+### G-06 · El historial no cambió con los rechazos (200)
+GET {{base}}/ventas/
+
+
+# ---------------------------------------------------------------------------
+# G-07 · Despliegue
+# ---------------------------------------------------------------------------
+# Con la URL pública (HTTPS) en `base`:
+#  1. La salud responde 200.
+#  2. Registrar el estado antes de redesplegar (libros y ventas).
+#  3. Redesplegar el backend y el frontend desde Easypanel.
+#  4. Repetir estas consultas: los datos siguen disponibles.
+
+### G-07 · Salud por HTTPS (200)
+GET {{base}}/health/ready
+
+### G-07 · Catálogo y ventas antes y después del redespliegue
+GET {{base}}/libros/
+
+###
+GET {{base}}/ventas/

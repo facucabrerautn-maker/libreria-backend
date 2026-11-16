@@ -46,3 +46,7 @@ openspec/changes/archive/
 
 # Pruebas de despliegue (evidencia se genera en el VPS)
 evidencia/
+
+# Archivos del orquestador de agentes (no forman parte de la entrega)
+.active-orchestrator-state.json
+.atl/
