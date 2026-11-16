@@ -1,0 +1,14 @@
+server {
+    listen 80;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    # /api/libros/ llega a FastAPI como /libros/ (la barra final de proxy_pass quita el prefijo).
+    location /api/ {
+        proxy_pass http://${API_UPSTREAM}/;
+    }
+}
