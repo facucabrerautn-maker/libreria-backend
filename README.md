@@ -68,7 +68,7 @@ Requiere `DATABASE_URL` en el entorno o en el archivo `.env`.
 
 El frontend usa HTML, CSS y JavaScript nativos, sin dependencias. Todas las peticiones salen de `frontend/public/js/api.js` con `fetch` y la base `/api`; Nginx reenvía `/api/` al backend (`frontend/default.conf.template`), de modo que `/api/libros/` llega a FastAPI como `/libros/`.
 
-Pantallas: Catálogo, Libros (alta), Autores (alta y listado), Géneros (alta y listado), Clientes (alta y consulta por id), Ventas (borrador y confirmación) e Historial.
+Pantallas: Catálogo, Libros (alta), Autores (alta y listado), Géneros (alta y listado), Editoriales (alta y listado), Clientes (alta y consulta por id), Ventas (borrador y confirmación) e Historial.
 
 Contrato con la API: el alta de libros envía `stock` y `autores` (`autor_id`, `rol`, `orden`). Para agregar autores y clientes a esos formularios se usan las consultas individuales `GET /autores/{id}` y `GET /clientes/{id}` (los clientes no tienen listado en la API). El borrador de la venta se guarda en memoria; los importes confirmados vienen siempre de la API.
 

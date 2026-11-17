@@ -42,6 +42,8 @@ async def create_venta(
     - Libro no repetido en los renglones (422)
     - Precio unitario copiado del libro en la base (no viaja en el DTO, RN-06)
     - Total calculado por el servidor (suma cantidad × precio_unitario, RN-07)
+    - Stock insuficiente → 409 con mensaje propio (RN-03)
+    - Stock descontado en la misma transacción que la venta
     - FK inválida → 409 con mensaje propio (RN-12)
     - Aviso de comprobante agendado con BackgroundTasks tras enviar respuesta (D-11)
     """
@@ -67,10 +69,14 @@ async def create_venta(
             detail=f"Cliente con id {venta_in.cliente_id} no existe o está dado de baja",
         )
 
-    # Leer precios de los libros de la base (una consulta con IN).
-    # Es necesario para copiar el precio; si falta un libro activo, se responde 409.
+    # Leer precios de los libros de la base (una consulta con IN) y bloquear las
+    # filas hasta el commit: así dos ventas simultáneas no pueden vender el mismo
+    # ejemplar dos veces. Si falta un libro activo, se responde 409.
     result_libros = await session.execute(
-        select(Libro).where(Libro.id.in_(libro_ids), Libro.activo.is_(True))
+        select(Libro)
+        .where(Libro.id.in_(libro_ids), Libro.activo.is_(True))
+        .order_by(Libro.id)
+        .with_for_update()
     )
     libros = {libro.id: libro for libro in result_libros.scalars().all()}
 
@@ -81,14 +87,26 @@ async def create_venta(
                 detail=f"Libro con id {libro_id} no existe o está dado de baja",
             )
 
-    # Calcular total y preparar renglones con precio copiado del libro
+    # Calcular total, validar el stock y descontar los ejemplares vendidos.
+    # El precio se copia del libro y el total lo arma el servidor.
     renglones_data = []
     total = Decimal("0")
     for renglon_in in venta_in.renglones:
         libro = libros[renglon_in.libro_id]
+        if libro.stock < renglon_in.cantidad:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Stock insuficiente de «{libro.titulo}»: "
+                    f"hay {libro.stock} y se piden {renglon_in.cantidad}"
+                ),
+            )
+
         precio_unitario = libro.precio
         subtotal = Decimal(renglon_in.cantidad) * precio_unitario
         total += subtotal
+        libro.stock -= renglon_in.cantidad
+        session.add(libro)
         renglones_data.append(
             {
                 "libro_id": renglon_in.libro_id,

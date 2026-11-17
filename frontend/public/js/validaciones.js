@@ -124,6 +124,18 @@
       return errores;
     },
 
+    /** Errores de alta o edición de una editorial antes de llamar a la API. */
+    validarEditorial: function (contexto) {
+      var datos = contexto || {};
+      var errores = [];
+
+      if (texto(datos.nombre) === '') {
+        errores.push({ campo: 'nombre', mensaje: 'El nombre de la editorial es obligatorio.' });
+      }
+
+      return errores;
+    },
+
     /** Errores de alta o edición de un cliente antes de llamar a la API. */
     validarCliente: function (contexto) {
       var datos = contexto || {};

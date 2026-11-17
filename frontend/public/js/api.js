@@ -198,6 +198,16 @@
     return cuerpo;
   }
 
+  /** Cuerpo común de POST y PATCH de editorial (nombre obligatorio, país opcional). */
+  function cuerpoEditorial(editorial) {
+    var datos = editorial || {};
+    var pais = textoRecortado(datos.pais);
+    return {
+      nombre: textoRecortado(datos.nombre),
+      pais: pais === '' ? null : pais
+    };
+  }
+
   /** Petición DELETE normalizada (204 sin cuerpo). */
   function eliminar(ruta) {
     return pedir(url(ruta), { metodo: 'DELETE' });
@@ -261,15 +271,34 @@
 
     /* --------------------------- Catálogos ---------------------------- */
 
-    /** GET /editoriales/ */
+    /** GET /editoriales/ con paginación limit/offset (default 100 para catálogos). */
     listarEditoriales: async function (opciones) {
       var ajustes = opciones || {};
-      var destino = conParametros(url('editoriales/'), { limit: ajustes.limit || 100, offset: 0 });
+      var destino = conParametros(url('editoriales/'), {
+        limit: ajustes.limit === undefined ? 100 : ajustes.limit,
+        offset: ajustes.offset === undefined ? 0 : ajustes.offset
+      });
       var resultado = await pedir(destino);
       if (!resultado.ok) {
         return resultado;
       }
       return { ok: true, estado: resultado.estado, datos: normalizarLista(resultado.datos) };
+    },
+
+    /** POST /editoriales/: nombre obligatorio y único (409 si ya existe). */
+    crearEditorial: function (editorial) {
+      return pedir(url('editoriales/'), {
+        metodo: 'POST',
+        cuerpo: cuerpoEditorial(editorial)
+      });
+    },
+
+    /** PATCH /editoriales/{id}: actualiza nombre y país. */
+    actualizarEditorial: function (id, editorial) {
+      return pedir(url('editoriales/' + encodeURIComponent(id)), {
+        metodo: 'PATCH',
+        cuerpo: cuerpoEditorial(editorial)
+      });
     },
 
     /** GET /generos/ */

@@ -3,7 +3,7 @@
  * Módulo: js/app.js
  * Responsabilidad: bootstrap, ruteo por hash y montaje de la vista activa.
  *
- * La aplicación es una única página con siete secciones. Cada cambio de hash
+ * La aplicación es una única página con ocho secciones. Cada cambio de hash
  * desmonta la vista anterior, delega el render en su módulo, marca el enlace
  * activo y mueve el foco al h1. Los datos llegan de la API: este módulo no
  * hidrata ni persiste nada.
@@ -18,6 +18,7 @@
     libros: 'vista-libros',
     autores: 'vista-autores',
     generos: 'vista-generos',
+    editoriales: 'vista-editoriales',
     clientes: 'vista-clientes',
     ventas: 'vista-ventas',
     historial: 'vista-historial'

@@ -21,6 +21,7 @@
 #vista-libros,
 #vista-autores,
 #vista-generos,
+#vista-editoriales,
 #vista-clientes,
 #vista-ventas,
 #vista-historial {
@@ -128,6 +129,7 @@
 .vista-libros__contenido,
 .vista-autores__contenido,
 .vista-generos__contenido,
+.vista-editoriales__contenido,
 .vista-clientes__contenido {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -167,6 +169,7 @@
 .vista-libros__listado,
 .vista-autores__listado,
 .vista-generos__listado,
+.vista-editoriales__listado,
 .vista-clientes__listado {
   display: flex;
   flex-direction: column;
@@ -178,6 +181,7 @@
    alineados arriba junto al listado. */
 .vista-autores__formulario,
 .vista-generos__formulario,
+.vista-editoriales__formulario,
 .vista-clientes__formulario {
   align-self: start;
 }
@@ -315,6 +319,15 @@
   overflow-wrap: anywhere;
 }
 
+/* Listado de editoriales: nombre y país, sin columna de estado. */
+.tabla-editoriales {
+  min-width: 30rem;
+}
+
+.tabla-editoriales td {
+  overflow-wrap: anywhere;
+}
+
 .tabla-renglones .numero {
   white-space: nowrap;
 }
@@ -394,6 +407,7 @@
 .vista-libros__listado-titulo,
 .vista-autores__listado-titulo,
 .vista-generos__listado-titulo,
+.vista-editoriales__listado-titulo,
 .vista-ventas__detalle-titulo {
   margin: 0;
   font-size: var(--tamano-texto-lg);
@@ -420,6 +434,7 @@
   .vista-libros__contenido,
   .vista-autores__contenido,
   .vista-generos__contenido,
+  .vista-editoriales__contenido,
   .vista-clientes__contenido {
     grid-template-columns: minmax(0, 22rem) minmax(0, 1fr);
   }

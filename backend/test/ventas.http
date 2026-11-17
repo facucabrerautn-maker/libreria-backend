@@ -1,7 +1,7 @@
 ### Crear venta válida con dos renglones (201) - Caso C-06
 # Respuesta esperada: renglones creados, precio_unitario copiado del libro,
 # subtotal por renglón y total calculado por el servidor. `fecha` en ISO 8601
-# con zona horaria Z.
+# con zona horaria Z. Además el stock de cada libro baja en la cantidad vendida.
 POST http://localhost:8000/ventas/
 Content-Type: application/json
 
@@ -64,6 +64,17 @@ Content-Type: application/json
   "cliente_id": 1,
   "renglones": [
     { "libro_id": 1, "cantidad": 0 }
+  ]
+}
+
+### Crear venta con stock insuficiente (409, mensaje propio) - RN-03
+POST http://localhost:8000/ventas/
+Content-Type: application/json
+
+{
+  "cliente_id": 1,
+  "renglones": [
+    { "libro_id": 1, "cantidad": 999 }
   ]
 }
 

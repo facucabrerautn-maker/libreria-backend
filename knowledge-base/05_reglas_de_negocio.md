@@ -16,3 +16,4 @@ Reglas codificadas por dominio, con códigos tipo RN-XX y el garante esperado (b
 | RN-10 | Todo listado se pagina con `limit` (de 1 a 100, por defecto 20) y `offset` (desde 0). | Restricciones en Query; 422 |
 | RN-11 | El listado de libros se puede filtrar por parte del título, sin distinguir mayúsculas. | Parámetro ligado, nunca SQL armado con texto |
 | RN-12 | Ningún error devuelve al cliente texto interno de la base (nombres de tablas, restricciones o trazas). | Traducción del `IntegrityError` a un mensaje propio |
+| RN-13 | Registrar una venta descuenta del stock de cada libro la cantidad vendida. Si no hay stock suficiente, responde 409 con mensaje propio y la venta no se registra. | `SELECT … FOR UPDATE` al leer los libros y descuento dentro de la misma transacción |
