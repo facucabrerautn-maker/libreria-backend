@@ -19,6 +19,8 @@
 .vista,
 #vista-catalogo,
 #vista-libros,
+#vista-autores,
+#vista-generos,
 #vista-clientes,
 #vista-ventas,
 #vista-historial {
@@ -124,6 +126,8 @@
 /* 3. Formularios y listados de las vistas de alta -------------------------- */
 
 .vista-libros__contenido,
+.vista-autores__contenido,
+.vista-generos__contenido,
 .vista-clientes__contenido {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -142,8 +146,11 @@
   min-width: 0;
 }
 
-/* Listados de libros y clientes: título de sección y tabla apilados con aire. */
+/* Listados de libros, autores, géneros y clientes: título de sección y tabla
+   apilados con aire. */
 .vista-libros__listado,
+.vista-autores__listado,
+.vista-generos__listado,
 .vista-clientes__listado {
   display: flex;
   flex-direction: column;
@@ -151,7 +158,10 @@
   min-width: 0;
 }
 
-/* Formulario de clientes: una sola columna, alineado arriba junto al listado. */
+/* Formularios de alta (autores, géneros, clientes): una sola columna,
+   alineados arriba junto al listado. */
+.vista-autores__formulario,
+.vista-generos__formulario,
 .vista-clientes__formulario {
   align-self: start;
 }
@@ -270,6 +280,24 @@
   overflow-wrap: anywhere;
 }
 
+/* Listado de autores: tres columnas; si no entra, scrollea adentro. */
+.tabla-autores {
+  min-width: 30rem;
+}
+
+.tabla-autores td {
+  overflow-wrap: anywhere;
+}
+
+/* Listado de géneros: dos columnas cortas. */
+.tabla-generos {
+  min-width: 18rem;
+}
+
+.tabla-generos td {
+  overflow-wrap: anywhere;
+}
+
 .tabla-renglones .numero {
   white-space: nowrap;
 }
@@ -347,6 +375,8 @@
 }
 
 .vista-libros__listado-titulo,
+.vista-autores__listado-titulo,
+.vista-generos__listado-titulo,
 .vista-ventas__detalle-titulo {
   margin: 0;
   font-size: var(--tamano-texto-lg);
@@ -371,6 +401,8 @@
 
 @media (min-width: 60rem) {
   .vista-libros__contenido,
+  .vista-autores__contenido,
+  .vista-generos__contenido,
   .vista-clientes__contenido {
     grid-template-columns: minmax(0, 22rem) minmax(0, 1fr);
   }

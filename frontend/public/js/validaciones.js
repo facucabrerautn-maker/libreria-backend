@@ -100,6 +100,30 @@
       return errores;
     },
 
+    /** Errores de alta de un autor antes de llamar a la API. */
+    validarAutor: function (contexto) {
+      var datos = contexto || {};
+      var errores = [];
+
+      if (texto(datos.nombre) === '') {
+        errores.push({ campo: 'nombre', mensaje: 'El nombre del autor es obligatorio.' });
+      }
+
+      return errores;
+    },
+
+    /** Errores de alta de un género antes de llamar a la API. */
+    validarGenero: function (contexto) {
+      var datos = contexto || {};
+      var errores = [];
+
+      if (texto(datos.nombre) === '') {
+        errores.push({ campo: 'nombre', mensaje: 'El nombre del género es obligatorio.' });
+      }
+
+      return errores;
+    },
+
     /** Errores de alta de un cliente antes de llamar a la API. */
     validarCliente: function (contexto) {
       var datos = contexto || {};

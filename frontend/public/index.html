@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Librería El Faro — Catálogo, clientes y ventas</title>
+  <title>Librería El Faro — Catálogo, autores, géneros y ventas</title>
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/componentes.css">
   <link rel="stylesheet" href="css/vistas.css">
@@ -16,6 +16,8 @@
     <ul>
       <li><a href="#/catalogo">Catálogo</a></li>
       <li><a href="#/libros">Libros</a></li>
+      <li><a href="#/autores">Autores</a></li>
+      <li><a href="#/generos">Géneros</a></li>
       <li><a href="#/clientes">Clientes</a></li>
       <li><a href="#/ventas">Ventas</a></li>
       <li><a href="#/historial">Historial</a></li>
@@ -28,6 +30,14 @@
     </section>
     <section id="vista-libros" hidden>
       <h1 tabindex="-1">Libros</h1>
+      <div class="region-mensajes" role="status" aria-live="polite"></div>
+    </section>
+    <section id="vista-autores" hidden>
+      <h1 tabindex="-1">Autores</h1>
+      <div class="region-mensajes" role="status" aria-live="polite"></div>
+    </section>
+    <section id="vista-generos" hidden>
+      <h1 tabindex="-1">Géneros</h1>
       <div class="region-mensajes" role="status" aria-live="polite"></div>
     </section>
     <section id="vista-clientes" hidden>
@@ -56,6 +66,12 @@
   <script src="js/vistas/libros-formulario.js"></script>
   <script src="js/vistas/libros-listado.js"></script>
   <script src="js/vistas/libros.js"></script>
+  <script src="js/vistas/autores-formulario.js"></script>
+  <script src="js/vistas/autores-listado.js"></script>
+  <script src="js/vistas/autores.js"></script>
+  <script src="js/vistas/generos-formulario.js"></script>
+  <script src="js/vistas/generos-listado.js"></script>
+  <script src="js/vistas/generos.js"></script>
   <script src="js/vistas/clientes-formulario.js"></script>
   <script src="js/vistas/clientes-listado.js"></script>
   <script src="js/vistas/clientes.js"></script>

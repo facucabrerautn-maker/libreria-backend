@@ -172,6 +172,11 @@
     return numero;
   }
 
+  /** Texto recortado; devuelve '' para null o undefined. */
+  function textoRecortado(valor) {
+    return valor === null || valor === undefined ? '' : String(valor).trim();
+  }
+
   window.Libreria.api = {
     CONTRATO: CONTRATO,
     idNumerico: idNumerico,
@@ -236,12 +241,51 @@
     /** GET /generos/ */
     listarGeneros: async function (opciones) {
       var ajustes = opciones || {};
-      var destino = conParametros(url('generos/'), { limit: ajustes.limit || 100, offset: 0 });
+      var destino = conParametros(url('generos/'), {
+        limit: ajustes.limit === undefined ? 100 : ajustes.limit,
+        offset: ajustes.offset === undefined ? 0 : ajustes.offset
+      });
       var resultado = await pedir(destino);
       if (!resultado.ok) {
         return resultado;
       }
       return { ok: true, estado: resultado.estado, datos: normalizarLista(resultado.datos) };
+    },
+
+    /** GET /autores/ con paginación limit/offset. */
+    listarAutores: async function (opciones) {
+      var ajustes = opciones || {};
+      var destino = conParametros(url('autores/'), {
+        limit: ajustes.limit === undefined ? CONTRATO.limite : ajustes.limit,
+        offset: ajustes.offset === undefined ? 0 : ajustes.offset
+      });
+      var resultado = await pedir(destino);
+      if (!resultado.ok) {
+        return resultado;
+      }
+      return { ok: true, estado: resultado.estado, datos: normalizarLista(resultado.datos) };
+    },
+
+    /** POST /autores/: nombre obligatorio y nacionalidad opcional. */
+    crearAutor: function (autor) {
+      var datos = autor || {};
+      var nacionalidad = textoRecortado(datos.nacionalidad);
+      return pedir(url('autores/'), {
+        metodo: 'POST',
+        cuerpo: {
+          nombre: textoRecortado(datos.nombre),
+          nacionalidad: nacionalidad === '' ? null : nacionalidad
+        }
+      });
+    },
+
+    /** POST /generos/: el nombre es único (409 si ya existe). */
+    crearGenero: function (genero) {
+      var datos = genero || {};
+      return pedir(url('generos/'), {
+        metodo: 'POST',
+        cuerpo: { nombre: textoRecortado(datos.nombre) }
+      });
     },
 
     /** GET /autores/{id}: nombre del autor antes de agregarlo a un libro. */
