@@ -16,8 +16,9 @@ class ClienteUpdate(UpdateModel):
     """DTO de entrada para actualizar un cliente. Campos opcionales (PATCH parcial)."""
     nombre: Optional[str] = PydanticField(default=None)
     email: Optional[str] = PydanticField(default=None)
+    activo: Optional[bool] = PydanticField(default=None)
 
-    campos_no_nulos: ClassVar[tuple[str, ...]] = ("nombre", "email")
+    campos_no_nulos: ClassVar[tuple[str, ...]] = ("nombre", "email", "activo")
 
 
 class ClienteRead(SQLModel):
@@ -25,6 +26,7 @@ class ClienteRead(SQLModel):
     id: int
     nombre: str
     email: str
+    activo: bool = True
     perfil: Optional["PerfilRead"] = None
 
     model_config = {"from_attributes": True}

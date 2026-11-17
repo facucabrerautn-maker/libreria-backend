@@ -14,13 +14,15 @@ class GeneroCreate(SQLModel):
 class GeneroUpdate(UpdateModel):
     """DTO de entrada para actualizar un género. Campos opcionales (PATCH parcial)."""
     nombre: Optional[str] = PydanticField(default=None)
+    activo: Optional[bool] = PydanticField(default=None)
 
-    campos_no_nulos: ClassVar[tuple[str, ...]] = ("nombre",)
+    campos_no_nulos: ClassVar[tuple[str, ...]] = ("nombre", "activo")
 
 
 class GeneroRead(SQLModel):
     """DTO de salida de un género."""
     id: int
     nombre: str
+    activo: bool = True
 
     model_config = {"from_attributes": True}

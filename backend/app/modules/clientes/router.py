@@ -14,7 +14,9 @@ from app.modules.clientes.schemas import (
 from app.modules.clientes.service import (
     create_cliente,
     create_perfil_cliente,
+    delete_cliente,
     get_cliente,
+    list_clientes,
     list_ventas_por_cliente,
     update_cliente,
 )
@@ -40,6 +42,31 @@ async def crear_cliente(
     - 422: datos de entrada inválidos
     """
     return await create_cliente(session, cliente_in)
+
+
+@router.get(
+    "/",
+    response_model=List[ClienteRead],
+    summary="Listar clientes",
+)
+async def listar_clientes(
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    incluir_inactivos: bool = Query(default=False),
+    session: AsyncSession = Depends(get_session),
+) -> List[ClienteRead]:
+    """Lista clientes con su perfil y paginación.
+
+    - `limit`: cantidad de resultados (1 a 100, default 20)
+    - `offset`: posición inicial (default 0)
+    - `incluir_inactivos`: muestra también las bajas lógicas (default false)
+    """
+    return await list_clientes(
+        session,
+        limit=limit,
+        offset=offset,
+        incluir_inactivos=incluir_inactivos,
+    )
 
 
 @router.get(
@@ -77,6 +104,23 @@ async def actualizar_cliente(
     - 422: datos inválidos
     """
     return await update_cliente(session, cliente_id, cliente_in)
+
+
+@router.delete(
+    "/{cliente_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Dar de baja un cliente (soft delete)",
+)
+async def eliminar_cliente(
+    cliente_id: int,
+    session: AsyncSession = Depends(get_session),
+) -> None:
+    """Marca el cliente como inactivo sin borrar la fila.
+
+    - 204: dado de baja
+    - 404: no existe o ya estaba dado de baja
+    """
+    await delete_cliente(session, cliente_id)
 
 
 @router.post(

@@ -19,6 +19,8 @@ class Libro(BaseModel, table=True):
     genero_id: Optional[int] = Field(
         default=None, foreign_key="genero.id", index=True
     )
+    # Soft delete: las bajas lógicas no borran la fila, marcan activo = false.
+    activo: bool = Field(default=True, index=True)
 
     editorial: Optional["Editorial"] = Relationship(back_populates="libros")
     genero: Optional["Genero"] = Relationship(back_populates="libros")

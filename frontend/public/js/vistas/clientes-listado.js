@@ -1,33 +1,70 @@
 /*
  * Librería — Global de Programación III.
  * Módulo: js/vistas/clientes-listado.js
- * Responsabilidad: tabla de clientes conocidos (consultados por ID o dados de
- * alta en esta sesión).
+ * Responsabilidad: tabla de clientes, armada con la página que devolvió
+ * GET /clientes/.
  *
- * La API del TP no expone un listado de clientes: se consultan de a uno con
- * GET /clientes/{id}. La tabla muestra lo que la interfaz ya conoce.
+ * Cada fila ofrece Editar y, según el estado, Eliminar (baja lógica) o
+ * Restaurar.
  */
 (function () {
   'use strict';
 
   window.Libreria = window.Libreria || {};
 
-  var ENCABEZADOS = ['ID', 'Nombre completo', 'Email'];
+  var ENCABEZADOS = ['ID', 'Nombre completo', 'Email', 'Estado', 'Acciones'];
+
+  function accionDe(cliente, opciones) {
+    var acciones = [];
+    if (typeof opciones.alEditar === 'function') {
+      acciones.push({
+        texto: 'Editar',
+        clase: 'boton--secundario',
+        etiqueta: 'Editar el cliente ' + cliente.nombre,
+        alHacer: function () { opciones.alEditar(cliente); }
+      });
+    }
+    if (cliente.activo === false) {
+      if (typeof opciones.alRestaurar === 'function') {
+        acciones.push({
+          texto: 'Restaurar',
+          clase: 'boton--primario',
+          etiqueta: 'Restaurar el cliente ' + cliente.nombre,
+          alHacer: function () { opciones.alRestaurar(cliente); }
+        });
+      }
+    } else if (typeof opciones.alEliminar === 'function') {
+      acciones.push({
+        texto: 'Eliminar',
+        clase: 'boton--peligro',
+        etiqueta: 'Dar de baja el cliente ' + cliente.nombre,
+        alHacer: function () { opciones.alEliminar(cliente); }
+      });
+    }
+    return window.Libreria.ui.crearAcciones(acciones);
+  }
+
+  function fila(cliente, opciones) {
+    var modelo = window.Libreria.modelo;
+    return [
+      cliente.id === undefined || cliente.id === null ? modelo.TEXTO_SIN_DATO : String(cliente.id),
+      modelo.texto(cliente.nombre),
+      modelo.texto(cliente.email),
+      cliente.activo === false ? 'Eliminado' : 'Activo',
+      accionDe(cliente, opciones)
+    ];
+  }
 
   window.Libreria.clientesListado = {
-    crear: function (clientes) {
+    crear: function (clientes, opciones) {
       var lista = Array.isArray(clientes) ? clientes : [];
-      var filas = lista.map(function (cliente) {
-        return [
-          cliente.id === undefined || cliente.id === null ? '—' : String(cliente.id),
-          window.Libreria.modelo.texto(cliente.nombre),
-          window.Libreria.modelo.texto(cliente.email)
-        ];
-      });
-      return window.Libreria.ui.crearTabla(ENCABEZADOS, filas, {
+      var ajustes = opciones || {};
+      return window.Libreria.ui.crearTabla(ENCABEZADOS, lista.map(function (cliente) {
+        return fila(cliente, ajustes);
+      }), {
         claseTabla: 'tabla tabla-clientes',
-        titulo: 'Clientes consultados',
-        vacia: 'Todavía no consultaste clientes. Podés dar de alta uno nuevo o buscarlo por ID.'
+        titulo: 'Clientes registrados',
+        vacia: 'Todavía no hay clientes registrados.'
       });
     }
   };

@@ -227,6 +227,25 @@ textarea:disabled {
   border-color: var(--color-acento);
 }
 
+.boton--peligro {
+  color: var(--color-error);
+  background-color: var(--color-superficie);
+  border-color: var(--color-error);
+}
+
+.boton--peligro:hover {
+  color: var(--color-acento-contraste);
+  background-color: var(--color-error);
+  border-color: var(--color-error);
+}
+
+/* Botón de fila de tabla: más chico para no engordar el listado. */
+.boton--compacto {
+  min-height: auto;
+  padding: var(--espacio-1) var(--espacio-3);
+  font-size: var(--tamano-texto-xs);
+}
+
 .boton--bloque {
   width: 100%;
 }
@@ -296,6 +315,15 @@ table .vacia {
   font-size: var(--tamano-texto-sm);
   color: var(--color-texto-suave);
   text-align: center;
+}
+
+/* Celda de acciones de una fila: botones Editar / Eliminar / Restaurar. */
+.acciones-tabla {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-2);
+  justify-content: flex-start;
+  white-space: nowrap;
 }
 
 

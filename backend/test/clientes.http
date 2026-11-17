@@ -65,3 +65,26 @@ GET http://localhost:8000/clientes/1/ventas
 
 ### Obtener ventas de un cliente inexistente (404)
 GET http://localhost:8000/clientes/999/ventas
+
+### Listar clientes (200, paginado)
+GET http://localhost:8000/clientes/?limit=10&offset=0
+
+### Listar clientes incluyendo bajas lógicas (200)
+GET http://localhost:8000/clientes/?limit=10&offset=0&incluir_inactivos=true
+
+### Dar de baja un cliente (204, soft delete)
+DELETE http://localhost:8000/clientes/1
+
+### El cliente dado de baja ya no se obtiene por id (404)
+GET http://localhost:8000/clientes/1
+
+### Dar de baja dos veces el mismo cliente (404)
+DELETE http://localhost:8000/clientes/1
+
+### Restaurar un cliente dado de baja (200, activo=true)
+PATCH http://localhost:8000/clientes/1
+Content-Type: application/json
+
+{
+  "activo": true
+}

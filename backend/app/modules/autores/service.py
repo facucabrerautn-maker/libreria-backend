@@ -7,7 +7,7 @@ from fastapi import HTTPException
 
 from app.modules.autores.models import Autor
 from app.modules.autores.schemas import AutorCreate, AutorUpdate, AutorRead
-from app.modules.libros.models import LibroAutor
+from app.modules.libros.models import Libro, LibroAutor
 from app.modules.libros.schemas import LibroDeAutorRead
 
 
@@ -21,9 +21,16 @@ async def create_autor(session: AsyncSession, autor_in: AutorCreate) -> AutorRea
 
 
 async def list_autores(
-    session: AsyncSession, limit: int = 20, offset: int = 0
+    session: AsyncSession,
+    limit: int = 20,
+    offset: int = 0,
+    incluir_inactivos: bool = False,
 ) -> List[AutorRead]:
-    """Lista autores con paginación (limit entre 1 y 100, offset desde 0)."""
+    """Lista autores con paginación (limit entre 1 y 100, offset desde 0).
+
+    Por defecto excluye las bajas lógicas; `incluir_inactivos=True` las muestra
+    para poder restaurarlas con PATCH.
+    """
     if limit < 1:
         limit = 1
     if limit > 100:
@@ -31,17 +38,21 @@ async def list_autores(
     if offset < 0:
         offset = 0
 
+    query = select(Autor)
+    if not incluir_inactivos:
+        query = query.where(Autor.activo.is_(True))
+
     result = await session.execute(
-        select(Autor).order_by(Autor.id).offset(offset).limit(limit)
+        query.order_by(Autor.id).offset(offset).limit(limit)
     )
     autores = result.scalars().all()
     return [AutorRead.model_validate(a) for a in autores]
 
 
 async def get_autor(session: AsyncSession, autor_id: int) -> AutorRead:
-    """Obtiene un autor por su id. 404 si no existe."""
+    """Obtiene un autor por su id. 404 si no existe o está dado de baja."""
     autor = await session.get(Autor, autor_id)
-    if autor is None:
+    if autor is None or not autor.activo:
         raise HTTPException(status_code=404, detail="Autor no encontrado")
     return AutorRead.model_validate(autor)
 
@@ -49,7 +60,11 @@ async def get_autor(session: AsyncSession, autor_id: int) -> AutorRead:
 async def update_autor(
     session: AsyncSession, autor_id: int, autor_in: AutorUpdate
 ) -> AutorRead:
-    """Actualiza un autor parcialmente (solo campos enviados)."""
+    """Actualiza un autor parcialmente (solo campos enviados).
+
+    Busca también las bajas lógicas para permitir restaurarlas enviando
+    `{"activo": true}`.
+    """
     autor = await session.get(Autor, autor_id)
     if autor is None:
         raise HTTPException(status_code=404, detail="Autor no encontrado")
@@ -64,6 +79,17 @@ async def update_autor(
     return AutorRead.model_validate(autor)
 
 
+async def delete_autor(session: AsyncSession, autor_id: int) -> None:
+    """Baja lógica de un autor (marca activo = false). 404 si no existe o ya está dado de baja."""
+    autor = await session.get(Autor, autor_id)
+    if autor is None or not autor.activo:
+        raise HTTPException(status_code=404, detail="Autor no encontrado")
+
+    autor.activo = False
+    session.add(autor)
+    await session.commit()
+
+
 async def list_libros_por_autor(
     session: AsyncSession, autor_id: int, limit: int = 20, offset: int = 0
 ) -> List[LibroDeAutorRead]:
@@ -73,7 +99,7 @@ async def list_libros_por_autor(
     para no depender de la carga perezosa.
     """
     autor = await session.get(Autor, autor_id)
-    if autor is None:
+    if autor is None or not autor.activo:
         raise HTTPException(status_code=404, detail="Autor no encontrado")
 
     if limit < 1:
@@ -86,7 +112,10 @@ async def list_libros_por_autor(
     result = await session.execute(
         select(LibroAutor)
         .options(joinedload(LibroAutor.libro))
-        .where(LibroAutor.autor_id == autor_id)
+        .where(
+            LibroAutor.autor_id == autor_id,
+            LibroAutor.libro.has(Libro.activo.is_(True)),
+        )
         .order_by(LibroAutor.orden, LibroAutor.libro_id)
         .offset(offset)
         .limit(limit)

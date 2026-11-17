@@ -46,6 +46,7 @@ class LibroUpdate(UpdateModel):
     stock: Optional[int] = PydanticField(default=None, ge=0)
     editorial_id: Optional[int] = PydanticField(default=None)
     genero_id: Optional[int] = PydanticField(default=None)
+    activo: Optional[bool] = PydanticField(default=None)
     autores: Optional[List[AutorIA]] = PydanticField(
         default=None,
         validation_alias=AliasChoices("autores", "autorias"),
@@ -59,6 +60,7 @@ class LibroUpdate(UpdateModel):
         "precio",
         "stock",
         "editorial_id",
+        "activo",
         "autores",
         "autorias",
     )
@@ -86,6 +88,7 @@ class LibroRead(SQLModel):
     stock: int
     editorial_id: int
     genero_id: Optional[int] = None
+    activo: bool = True
     editorial: Optional[EditorialRead] = None
     genero: Optional[GeneroRead] = None
     autorias: List[AutorIARead] = PydanticField(default_factory=list)
@@ -103,6 +106,7 @@ class LibroResumenRead(SQLModel):
     stock: int
     editorial_id: int
     genero_id: Optional[int] = None
+    activo: bool = True
 
     model_config = {"from_attributes": True}
 

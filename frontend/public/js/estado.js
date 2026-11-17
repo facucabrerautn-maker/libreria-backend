@@ -125,6 +125,16 @@
       }).filter(Boolean);
     },
 
+    /* Reemplaza la caché con el listado de la API (solo clientes activos). */
+    fijarClientes: function (lista) {
+      clientes = {};
+      ordenClientes = [];
+      var estado = window.Libreria.estado;
+      (Array.isArray(lista) ? lista : []).forEach(function (cliente) {
+        estado.recordarCliente(cliente);
+      });
+    },
+
     /* ------------------- Borrador de la venta -------------------- */
 
     borrador: function () {

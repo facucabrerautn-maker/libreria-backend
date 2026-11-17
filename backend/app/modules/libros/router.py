@@ -7,6 +7,7 @@ from app.core.database import get_session
 from app.modules.libros.schemas import LibroCreate, LibroRead, LibroUpdate
 from app.modules.libros.service import (
     create_libro,
+    delete_libro,
     get_libro,
     list_libros,
     update_libro,
@@ -44,6 +45,7 @@ async def listar_libros(
     offset: int = Query(default=0, ge=0),
     titulo: Optional[str] = Query(default=None),
     genero_id: Optional[int] = Query(default=None),
+    incluir_inactivos: bool = Query(default=False),
     session: AsyncSession = Depends(get_session),
 ) -> List[LibroRead]:
     """Lista libros con paginación y filtros opcionales.
@@ -52,6 +54,7 @@ async def listar_libros(
     - `offset`: posición inicial (default 0)
     - `titulo`: filtro por parte del título (sin distinguir mayúsculas)
     - `genero_id`: filtro por género
+    - `incluir_inactivos`: muestra también las bajas lógicas (default false)
     """
     return await list_libros(
         session,
@@ -59,6 +62,7 @@ async def listar_libros(
         offset=offset,
         titulo=titulo,
         genero_id=genero_id,
+        incluir_inactivos=incluir_inactivos,
     )
 
 
@@ -77,6 +81,23 @@ async def obtener_libro(
     - 404: no existe
     """
     return await get_libro(session, libro_id)
+
+
+@router.delete(
+    "/{libro_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Dar de baja un libro (soft delete)",
+)
+async def eliminar_libro(
+    libro_id: int,
+    session: AsyncSession = Depends(get_session),
+) -> None:
+    """Marca el libro como inactivo sin borrar la fila.
+
+    - 204: dado de baja
+    - 404: no existe o ya estaba dado de baja
+    """
+    await delete_libro(session, libro_id)
 
 
 @router.patch(

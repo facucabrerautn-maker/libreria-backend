@@ -116,6 +116,54 @@
       return celda;
     },
 
+    /**
+     * Celda de acciones con botones. Cada acción: { texto, alHacer, clase?, etiqueta? }.
+     * Devuelve un nodo listo para usar como celda de crearTabla.
+     */
+    crearAcciones: function (acciones) {
+      var contenedor = document.createElement('div');
+      contenedor.className = 'acciones-tabla';
+      (acciones || []).forEach(function (accion) {
+        var boton = document.createElement('button');
+        boton.type = 'button';
+        boton.className = 'boton ' + (accion.clase || 'boton--secundario') + ' boton--compacto';
+        boton.textContent = aTexto(accion.texto);
+        if (accion.etiqueta) {
+          boton.setAttribute('aria-label', accion.etiqueta);
+        }
+        if (typeof accion.alHacer === 'function') {
+          boton.addEventListener('click', accion.alHacer);
+        }
+        contenedor.appendChild(boton);
+      });
+      return contenedor;
+    },
+
+    /** Casilla con etiqueta, para filtros de listado. Devuelve el contenedor. */
+    crearCasilla: function (id, etiqueta, alCambiar) {
+      var contenedor = document.createElement('div');
+      contenedor.className = 'casilla';
+
+      var control = document.createElement('input');
+      control.type = 'checkbox';
+      control.id = id;
+      control.name = id;
+
+      var label = document.createElement('label');
+      label.setAttribute('for', id);
+      label.textContent = aTexto(etiqueta);
+
+      if (typeof alCambiar === 'function') {
+        control.addEventListener('change', function () {
+          alCambiar(control.checked);
+        });
+      }
+
+      contenedor.appendChild(control);
+      contenedor.appendChild(label);
+      return contenedor;
+    },
+
     /** Tabla con encabezados de columna; las celdas aceptan texto o nodos. */
     crearTabla: function (encabezados, filas, opciones) {
       var config = opciones || {};

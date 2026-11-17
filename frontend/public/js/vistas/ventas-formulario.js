@@ -3,10 +3,11 @@
  * Módulo: js/vistas/ventas-formulario.js
  * Responsabilidad: selectores de cliente y de libro de la vista Ventas.
  *
- * El cliente se elige entre los ya consultados (GET /clientes/{id}) o se busca
- * por ID en el momento. Los libros se cargan de GET /libros/ (hasta 100) y se
- * pueden filtrar por título contra la API. El formulario no conoce el borrador:
- * avisa por callbacks y la vista decide.
+ * El selector de cliente se llena con GET /clientes/ (solo activos) y además
+ * permite buscar uno puntual por ID con GET /clientes/{id}. Los libros se
+ * cargan de GET /libros/ (hasta 100) y se pueden filtrar por título contra la
+ * API. El formulario no conoce el borrador: avisa por callbacks y la vista
+ * decide.
  */
 (function () {
   'use strict';
@@ -89,7 +90,7 @@
       aviso(
         nodoAvisoCliente,
         resultado.estado === 404
-          ? 'No existe un cliente con el ID ' + id + '.'
+          ? 'No existe un cliente activo con el ID ' + id + '.'
           : ui.mensajeDeApi(resultado),
         'error'
       );
@@ -301,6 +302,9 @@
         },
         avisoLibro: function (texto, tipo) {
           aviso(nodoAvisoLibro, texto, tipo);
+        },
+        avisoCliente: function (texto, tipo) {
+          aviso(nodoAvisoCliente, texto, tipo);
         },
         seleccionarCliente: function (id) {
           nodoCliente.value = id === null || id === undefined ? '' : String(id);

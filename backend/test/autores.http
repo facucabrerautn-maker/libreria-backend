@@ -32,3 +32,31 @@ GET http://localhost:8000/autores/1/libros
 
 ### Libros de un autor inexistente (404)
 GET http://localhost:8000/autores/999/libros
+
+### Listar autores incluyendo bajas lógicas (200)
+GET http://localhost:8000/autores/?limit=10&offset=0&incluir_inactivos=true
+
+### Dar de baja un autor (204, soft delete)
+DELETE http://localhost:8000/autores/1
+
+### El autor dado de baja ya no se obtiene por id (404)
+GET http://localhost:8000/autores/1
+
+### Dar de baja dos veces el mismo autor (404)
+DELETE http://localhost:8000/autores/1
+
+### Restaurar un autor dado de baja (200, activo=true)
+PATCH http://localhost:8000/autores/1
+Content-Type: application/json
+
+{
+  "activo": true
+}
+
+### PATCH con activo nulo (422, no admite null explícito)
+PATCH http://localhost:8000/autores/1
+Content-Type: application/json
+
+{
+  "activo": null
+}

@@ -7,6 +7,7 @@ from app.core.database import get_session
 from app.modules.generos.schemas import GeneroCreate, GeneroRead, GeneroUpdate
 from app.modules.generos.service import (
     create_genero,
+    delete_genero,
     get_genero,
     list_generos,
     list_libros_por_genero,
@@ -44,14 +45,21 @@ async def crear_genero(
 async def listar_generos(
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
+    incluir_inactivos: bool = Query(default=False),
     session: AsyncSession = Depends(get_session),
 ) -> List[GeneroRead]:
     """Lista géneros con paginación.
 
     - `limit`: cantidad de resultados (1 a 100, default 20)
     - `offset`: posición inicial (default 0)
+    - `incluir_inactivos`: muestra también las bajas lógicas (default false)
     """
-    return await list_generos(session, limit=limit, offset=offset)
+    return await list_generos(
+        session,
+        limit=limit,
+        offset=offset,
+        incluir_inactivos=incluir_inactivos,
+    )
 
 
 @router.get(
@@ -89,6 +97,23 @@ async def actualizar_genero(
     - 422: datos inválidos
     """
     return await update_genero(session, genero_id, genero_in)
+
+
+@router.delete(
+    "/{genero_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Dar de baja un género (soft delete)",
+)
+async def eliminar_genero(
+    genero_id: int,
+    session: AsyncSession = Depends(get_session),
+) -> None:
+    """Marca el género como inactivo sin borrar la fila.
+
+    - 204: dado de baja
+    - 404: no existe o ya estaba dado de baja
+    """
+    await delete_genero(session, genero_id)
 
 
 @router.get(

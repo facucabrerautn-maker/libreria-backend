@@ -10,4 +10,6 @@ class Genero(BaseModel, table=True):
 
     id: Optional[int] = Field(default=None, primary_key=True)
     nombre: str = Field(index=True, unique=True)
+    # Soft delete: las bajas lógicas no borran la fila, marcan activo = false.
+    activo: bool = Field(default=True, index=True)
     libros: List["Libro"] = Relationship(back_populates="genero")

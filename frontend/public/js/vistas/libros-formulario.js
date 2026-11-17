@@ -18,9 +18,12 @@
   var nodoLista = null;
   var nodoEstadoAutor = null;
   var nodoBotonEnviar = null;
+  var nodoCancelar = null;
+  var nodoTitulo = null;
   var nodoAutorId = null;
   var nodoEditorial = null;
   var nodoGenero = null;
+  var alCancelar = null;
 
   function crearSelect(id, nombre, etiqueta) {
     var control = document.createElement('select');
@@ -244,16 +247,59 @@
     };
   }
 
+  function fijarValor(formulario, nombre, valor) {
+    var control = formulario.querySelector('[name="' + nombre + '"]');
+    if (control) {
+      control.value = valor === null || valor === undefined ? '' : String(valor);
+    }
+  }
+
   function limpiar(formulario) {
     ['titulo', 'isbn', 'precio', 'stock', 'editorialId', 'generoId', 'autor_id'].forEach(function (nombre) {
-      var control = formulario.querySelector('[name="' + nombre + '"]');
-      if (control) {
-        control.value = '';
-      }
+      fijarValor(formulario, nombre, '');
     });
     autores = [];
     pintarAutores();
     avisoAutor('');
+  }
+
+  /** Llena el formulario con un libro del detalle (GET /libros/{id}). */
+  function cargar(formulario, datos) {
+    var libro = datos || {};
+    fijarValor(formulario, 'titulo', libro.titulo);
+    fijarValor(formulario, 'isbn', libro.isbn);
+    fijarValor(formulario, 'precio', libro.precio);
+    fijarValor(formulario, 'stock', libro.stock);
+    fijarValor(formulario, 'editorialId', libro.editorial_id);
+    fijarValor(
+      formulario,
+      'generoId',
+      libro.genero_id === null || libro.genero_id === undefined ? '' : libro.genero_id
+    );
+
+    autores = window.Libreria.modelo.autoresDeLibro(libro).map(function (autoria, indice) {
+      return {
+        autorId: autoria.autorId,
+        nombre: autoria.nombre || 'Autor #' + autoria.autorId,
+        rol: ROLES.indexOf(autoria.rol) === -1 ? 'autor' : autoria.rol,
+        orden: indice + 1
+      };
+    });
+    pintarAutores();
+    avisoAutor('');
+  }
+
+  function fijarModoEdicion(activo) {
+    var editando = Boolean(activo);
+    if (nodoTitulo) {
+      nodoTitulo.textContent = editando ? 'Editar libro' : 'Registrar libro';
+    }
+    if (nodoBotonEnviar) {
+      nodoBotonEnviar.textContent = editando ? 'Guardar cambios' : 'Registrar libro';
+    }
+    if (nodoCancelar) {
+      nodoCancelar.hidden = !editando;
+    }
   }
 
   function crearFormulario(alEnviar) {
@@ -264,10 +310,10 @@
     formulario.className = 'formulario vista-libros__formulario';
     formulario.setAttribute('novalidate', '');
 
-    var titulo = document.createElement('h2');
-    titulo.className = 'formulario__titulo';
-    titulo.textContent = 'Registrar libro';
-    formulario.appendChild(titulo);
+    nodoTitulo = document.createElement('h2');
+    nodoTitulo.className = 'formulario__titulo';
+    nodoTitulo.textContent = 'Registrar libro';
+    formulario.appendChild(nodoTitulo);
 
     formulario.appendChild(
       crearEntrada('libro-titulo', 'titulo', 'Título', 'text', [['required', '']])
@@ -313,6 +359,19 @@
     nodoBotonEnviar.className = 'boton boton--primario';
     nodoBotonEnviar.textContent = 'Registrar libro';
     acciones.appendChild(nodoBotonEnviar);
+
+    nodoCancelar = document.createElement('button');
+    nodoCancelar.type = 'button';
+    nodoCancelar.className = 'boton boton--secundario';
+    nodoCancelar.textContent = 'Cancelar edición';
+    nodoCancelar.hidden = true;
+    nodoCancelar.addEventListener('click', function () {
+      if (typeof alCancelar === 'function') {
+        alCancelar();
+      }
+    });
+    acciones.appendChild(nodoCancelar);
+
     formulario.appendChild(acciones);
 
     formulario.addEventListener('submit', function (evento) {
@@ -328,13 +387,23 @@
   window.Libreria.librosFormulario = {
     crear: function (opciones) {
       var ajustes = opciones || {};
+      alCancelar = ajustes.alCancelar;
       var formulario = crearFormulario(ajustes.alEnviar);
       return {
         formulario: formulario,
         leer: function () { return leer(formulario); },
         limpiar: function () { limpiar(formulario); },
+        cargar: function (datos) { cargar(formulario, datos); },
+        fijarModoEdicion: fijarModoEdicion,
+        enfocar: function () {
+          var control = formulario.querySelector('[name="titulo"]');
+          if (control) {
+            control.focus();
+          }
+        },
         deshabilitar: function (valor) {
           window.Libreria.ui.deshabilitar(nodoBotonEnviar, valor);
+          window.Libreria.ui.deshabilitar(nodoCancelar, valor);
         },
         cargarCatalogos: function (editoriales, generos) {
           fijarOpciones(nodoEditorial, [{ valor: '', texto: 'Elegí una editorial' }].concat(

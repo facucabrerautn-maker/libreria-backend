@@ -11,6 +11,8 @@ class Cliente(BaseModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     nombre: str
     email: str = Field(index=True, unique=True)
+    # Soft delete: las bajas lógicas no borran la fila, marcan activo = false.
+    activo: bool = Field(default=True, index=True)
     perfil: Optional["PerfilCliente"] = Relationship(back_populates="cliente", sa_relationship_kwargs={"uselist": False})
     ventas: List["Venta"] = Relationship(back_populates="cliente")
 

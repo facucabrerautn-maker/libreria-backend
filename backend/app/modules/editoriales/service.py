@@ -95,7 +95,7 @@ async def list_libros_por_editorial(
 
     result = await session.execute(
         select(Libro)
-        .where(Libro.editorial_id == editorial_id)
+        .where(Libro.editorial_id == editorial_id, Libro.activo.is_(True))
         .order_by(Libro.id)
         .offset(offset)
         .limit(limit)

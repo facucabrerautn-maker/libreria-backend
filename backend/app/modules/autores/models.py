@@ -11,4 +11,6 @@ class Autor(BaseModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     nombre: str = Field(index=True)
     nacionalidad: Optional[str] = None
+    # Soft delete: las bajas lógicas no borran la fila, marcan activo = false.
+    activo: bool = Field(default=True, index=True)
     autorias: List["LibroAutor"] = Relationship(back_populates="autor")

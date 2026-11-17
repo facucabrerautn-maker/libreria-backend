@@ -16,8 +16,9 @@ class AutorUpdate(UpdateModel):
     """DTO de entrada para actualizar un autor. Campos opcionales (PATCH parcial)."""
     nombre: Optional[str] = PydanticField(default=None)
     nacionalidad: Optional[str] = PydanticField(default=None)
+    activo: Optional[bool] = PydanticField(default=None)
 
-    campos_no_nulos: ClassVar[tuple[str, ...]] = ("nombre",)
+    campos_no_nulos: ClassVar[tuple[str, ...]] = ("nombre", "activo")
 
 
 class AutorRead(SQLModel):
@@ -25,5 +26,6 @@ class AutorRead(SQLModel):
     id: int
     nombre: str
     nacionalidad: Optional[str] = None
+    activo: bool = True
 
     model_config = {"from_attributes": True}

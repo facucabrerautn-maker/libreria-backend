@@ -7,6 +7,7 @@ from app.core.database import get_session
 from app.modules.autores.schemas import AutorCreate, AutorRead, AutorUpdate
 from app.modules.autores.service import (
     create_autor,
+    delete_autor,
     get_autor,
     list_autores,
     list_libros_por_autor,
@@ -43,14 +44,21 @@ async def crear_autor(
 async def listar_autores(
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
+    incluir_inactivos: bool = Query(default=False),
     session: AsyncSession = Depends(get_session),
 ) -> List[AutorRead]:
     """Lista autores con paginación.
 
     - `limit`: cantidad de resultados (1 a 100, default 20)
     - `offset`: posición inicial (default 0)
+    - `incluir_inactivos`: muestra también las bajas lógicas (default false)
     """
-    return await list_autores(session, limit=limit, offset=offset)
+    return await list_autores(
+        session,
+        limit=limit,
+        offset=offset,
+        incluir_inactivos=incluir_inactivos,
+    )
 
 
 @router.get(
@@ -87,6 +95,23 @@ async def actualizar_autor(
     - 422: datos inválidos
     """
     return await update_autor(session, autor_id, autor_in)
+
+
+@router.delete(
+    "/{autor_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Dar de baja un autor (soft delete)",
+)
+async def eliminar_autor(
+    autor_id: int,
+    session: AsyncSession = Depends(get_session),
+) -> None:
+    """Marca el autor como inactivo sin borrar la fila.
+
+    - 204: dado de baja
+    - 404: no existe o ya estaba dado de baja
+    """
+    await delete_autor(session, autor_id)
 
 
 @router.get(

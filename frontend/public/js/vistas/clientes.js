@@ -1,11 +1,12 @@
 /*
  * Librería — Global de Programación III.
  * Módulo: js/vistas/clientes.js
- * Responsabilidad: vista Clientes: alta contra la API y consulta por ID.
+ * Responsabilidad: vista Clientes: alta, edición, baja lógica y listado paginado.
  *
- * POST /clientes/ devuelve el cliente creado; GET /clientes/{id} permite
- * recuperar un cliente y mostrar su nombre antes de elegirlo en una venta.
- * La API no expone listado: la tabla muestra los clientes ya consultados.
+ * GET /clientes/ trae la página de clientes con su perfil. El submit se
+ * intercepta y se envía POST /clientes/ (alta) o PATCH /clientes/{id} (edición).
+ * La casilla «Mostrar dados de baja» incluye las bajas lógicas para poder
+ * restaurarlas.
  */
 (function () {
   'use strict';
@@ -13,13 +14,22 @@
   window.Libreria = window.Libreria || {};
   window.Libreria.vistas = window.Libreria.vistas || {};
 
+  var LIMITE = 20;
+  var CLASE_CONTENIDO = 'vista-clientes__contenido';
+  var CLASE_LISTADO = 'vista-clientes__listado';
   var SELECTOR_REGION = '.region-mensajes';
+
+  var offset = 0;
+  var total = null;
+  var totalConocido = null;
+  var token = 0;
+  var incluirInactivos = false;
+  var editandoId = null;
 
   var nodoRegion = null;
   var nodoListado = null;
-  var nodoEstadoBusqueda = null;
-  var nodoId = null;
-  var nodoBotonBuscar = null;
+  var nodoTabla = null;
+  var nodoPaginacion = null;
   var piezasFormulario = null;
   var enviando = false;
 
@@ -31,101 +41,133 @@
     }
   }
 
-  function pintarListado() {
+  function mostrarErrorListado(resultado) {
     var ui = window.Libreria.ui;
-    if (!nodoListado) {
-      return false;
-    }
-    ui.vaciar(nodoListado);
-    nodoListado.appendChild(
-      window.Libreria.clientesListado.crear(window.Libreria.estado.listarClientes())
+    ui.vaciar(nodoTabla);
+    ui.mostrarMensaje(nodoTabla, ui.mensajeDeApi(resultado), 'error');
+    var reintentar = document.createElement('button');
+    reintentar.type = 'button';
+    reintentar.className = 'boton boton--secundario';
+    reintentar.textContent = 'Reintentar';
+    reintentar.addEventListener('click', function () {
+      cargarListado();
+    });
+    nodoTabla.appendChild(reintentar);
+  }
+
+  function cancelarEdicion() {
+    editandoId = null;
+    piezasFormulario.fijarModoEdicion(false);
+    piezasFormulario.limpiar();
+  }
+
+  function alEditar(cliente) {
+    editandoId = cliente.id;
+    piezasFormulario.cargar(cliente);
+    piezasFormulario.fijarModoEdicion(true);
+    piezasFormulario.formulario.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    piezasFormulario.enfocar();
+  }
+
+  async function alEliminar(cliente) {
+    var nombre = cliente && cliente.nombre ? cliente.nombre : 'ID ' + cliente.id;
+    var confirmado = window.confirm(
+      '¿Dar de baja el cliente «' + nombre + '»? No se borra: queda como eliminado y se puede restaurar.'
     );
-    return true;
-  }
-
-  function mostrarAvisoBusqueda(texto, tipo) {
-    var ui = window.Libreria.ui;
-    ui.vaciar(nodoEstadoBusqueda);
-    if (texto) {
-      ui.mostrarMensaje(nodoEstadoBusqueda, texto, tipo || 'aviso');
+    if (!confirmado) {
+      return;
     }
+
+    var resultado = await window.Libreria.api.eliminarCliente(cliente.id);
+    if (!resultado.ok) {
+      mostrarResultado(window.Libreria.ui.mensajeDeApi(resultado), 'error');
+      return;
+    }
+
+    if (editandoId === cliente.id) {
+      cancelarEdicion();
+    }
+    mostrarResultado('Cliente «' + nombre + '» dado de baja.', 'exito');
+    cargarListado();
   }
 
-  async function buscarPorId() {
+  async function alRestaurar(cliente) {
+    var nombre = cliente && cliente.nombre ? cliente.nombre : 'ID ' + cliente.id;
+    var resultado = await window.Libreria.api.restaurarCliente(cliente.id);
+    if (!resultado.ok) {
+      mostrarResultado(window.Libreria.ui.mensajeDeApi(resultado), 'error');
+      return;
+    }
+
+    mostrarResultado('Cliente «' + nombre + '» restaurado.', 'exito');
+    cargarListado();
+  }
+
+  async function cargarListado() {
     var ui = window.Libreria.ui;
     var api = window.Libreria.api;
-    var id = api.idNumerico(nodoId.value);
-    mostrarAvisoBusqueda('');
+    var actual = ++token;
 
-    if (id === null) {
-      mostrarAvisoBusqueda('Escribí un ID de cliente entero mayor que cero.', 'error');
-      nodoId.focus();
+    ui.vaciar(nodoTabla);
+    ui.vaciar(nodoPaginacion);
+    ui.mostrarCargando(nodoTabla);
+
+    var resultado = await api.listarClientes({
+      limit: LIMITE,
+      offset: offset,
+      incluirInactivos: incluirInactivos
+    });
+    if (actual !== token) {
       return;
     }
 
-    ui.deshabilitar(nodoBotonBuscar, true);
-    mostrarAvisoBusqueda('Consultando el cliente en la API…', 'cargando');
-
-    var resultado = await api.obtenerCliente(id);
-    ui.deshabilitar(nodoBotonBuscar, false);
+    ui.quitarCargando(nodoTabla);
+    ui.vaciar(nodoTabla);
 
     if (!resultado.ok) {
-      mostrarAvisoBusqueda(
-        resultado.estado === 404
-          ? 'No existe un cliente con el ID ' + id + '.'
-          : ui.mensajeDeApi(resultado),
-        'error'
-      );
+      mostrarErrorListado(resultado);
       return;
     }
 
-    var cliente = window.Libreria.estado.recordarCliente(resultado.datos);
-    pintarListado();
-    mostrarAvisoBusqueda('Cliente encontrado: ' + cliente.nombre + ' (ID ' + cliente.id + ').', 'exito');
-    nodoId.value = '';
-  }
+    var clientes = resultado.datos.items;
+    total = resultado.datos.total;
 
-  function crearBuscador() {
-    var ui = window.Libreria.ui;
-    var busqueda = document.createElement('form');
-    busqueda.className = 'formulario formulario--compacto busqueda-id';
-    busqueda.setAttribute('role', 'search');
-    busqueda.setAttribute('aria-label', 'Buscar un cliente por ID');
+    if (clientes.length === 0 && offset > 0) {
+      totalConocido = offset;
+      offset = Math.max(0, offset - LIMITE);
+      cargarListado();
+      return;
+    }
+    if (total === null && totalConocido !== null) {
+      total = totalConocido;
+    }
 
-    nodoId = document.createElement('input');
-    nodoId.id = 'cliente-buscar-id';
-    nodoId.name = 'cliente_id';
-    nodoId.type = 'number';
-    nodoId.min = '1';
-    nodoId.step = '1';
-    nodoId.inputMode = 'numeric';
-    nodoId.className = 'control';
-
-    var ayuda = document.createElement('p');
-    ayuda.className = 'campo__ayuda';
-    ayuda.id = 'cliente-buscar-id-ayuda';
-    ayuda.textContent =
-      'La API no expone un listado de clientes: se consultan de a uno con GET /clientes/{id}.';
-    nodoId.setAttribute('aria-describedby', ayuda.id);
-
-    busqueda.appendChild(ui.crearCampo('Buscar cliente por ID', nodoId));
-    busqueda.appendChild(ayuda);
-
-    var acciones = document.createElement('div');
-    acciones.className = 'campo__acciones';
-    nodoBotonBuscar = document.createElement('button');
-    nodoBotonBuscar.type = 'submit';
-    nodoBotonBuscar.className = 'boton boton--secundario';
-    nodoBotonBuscar.textContent = 'Buscar cliente';
-    acciones.appendChild(nodoBotonBuscar);
-    busqueda.appendChild(acciones);
-
-    busqueda.addEventListener('submit', function (evento) {
-      evento.preventDefault();
-      buscarPorId();
+    clientes.forEach(function (cliente) {
+      if (cliente && cliente.activo !== false) {
+        window.Libreria.estado.recordarCliente(cliente);
+      }
     });
 
-    return busqueda;
+    nodoTabla.appendChild(
+      window.Libreria.clientesListado.crear(clientes, {
+        alEditar: alEditar,
+        alEliminar: alEliminar,
+        alRestaurar: alRestaurar
+      })
+    );
+    nodoPaginacion.appendChild(
+      window.Libreria.paginacion.crear({
+        offset: offset,
+        total: total,
+        cantidad: clientes.length,
+        limite: LIMITE,
+        etiqueta: 'clientes',
+        alCambiar: function (nuevoOffset) {
+          offset = nuevoOffset;
+          cargarListado();
+        }
+      })
+    );
   }
 
   function mostrarErroresDeEnvio(resultado) {
@@ -171,10 +213,13 @@
       return;
     }
 
+    var editando = editandoId !== null;
     enviando = true;
     piezasFormulario.deshabilitar(true);
 
-    var resultado = await window.Libreria.api.crearCliente(contexto);
+    var resultado = editando
+      ? await window.Libreria.api.actualizarCliente(editandoId, contexto)
+      : await window.Libreria.api.crearCliente(contexto);
     enviando = false;
     piezasFormulario.deshabilitar(false);
 
@@ -185,14 +230,32 @@
 
     var cliente = resultado.datos || {};
     window.Libreria.estado.recordarCliente(cliente);
-    piezasFormulario.limpiar();
+    cancelarEdicion();
+    if (!editando) {
+      offset = 0;
+      totalConocido = null;
+    }
     mostrarResultado(
-      'Cliente «' + (cliente.nombre || contexto.nombre) +
-        '» registrado correctamente' +
+      'Cliente «' + (cliente.nombre || contexto.nombre) + '» ' +
+        (editando ? 'actualizado' : 'registrado') + ' correctamente' +
         (cliente.id !== undefined ? ' (ID ' + cliente.id + ').' : '.'),
       'exito'
     );
-    pintarListado();
+    cargarListado();
+  }
+
+  function crearFiltros() {
+    var filtros = document.createElement('div');
+    filtros.className = 'listado__filtros';
+    filtros.appendChild(
+      window.Libreria.ui.crearCasilla('clientes-incluir-inactivos', 'Mostrar dados de baja', function (activo) {
+        incluirInactivos = activo;
+        offset = 0;
+        totalConocido = null;
+        cargarListado();
+      })
+    );
+    return filtros;
   }
 
   window.Libreria.vistas.clientes = {
@@ -201,39 +264,49 @@
       var ui = window.Libreria.ui;
 
       nodoRegion = seccion ? seccion.querySelector(SELECTOR_REGION) : null;
+      offset = 0;
+      total = null;
+      totalConocido = null;
+      incluirInactivos = false;
+      editandoId = null;
 
       var contenido = document.createElement('div');
-      contenido.className = 'vista-clientes__contenido';
+      contenido.className = CLASE_CONTENIDO;
 
-      piezasFormulario = window.Libreria.clientesFormulario.crear({ alEnviar: alEnviar });
-
-      var columna = document.createElement('div');
-      columna.className = 'vista-clientes__listado';
-
-      var titulo = document.createElement('h2');
-      titulo.className = 'vista-libros__listado-titulo';
-      titulo.textContent = 'Clientes';
-      columna.appendChild(titulo);
-      columna.appendChild(crearBuscador());
-
-      nodoEstadoBusqueda = document.createElement('div');
-      nodoEstadoBusqueda.className = 'busqueda-id__estado';
-      columna.appendChild(nodoEstadoBusqueda);
+      piezasFormulario = window.Libreria.clientesFormulario.crear({
+        alEnviar: alEnviar,
+        alCancelar: cancelarEdicion
+      });
 
       nodoListado = document.createElement('div');
-      nodoListado.className = 'listado';
-      columna.appendChild(nodoListado);
+      nodoListado.className = CLASE_LISTADO;
+
+      var tituloListado = document.createElement('h2');
+      tituloListado.className = 'vista-clientes__listado-titulo';
+      tituloListado.textContent = 'Clientes registrados';
+      nodoListado.appendChild(tituloListado);
+      nodoListado.appendChild(crearFiltros());
+
+      nodoTabla = document.createElement('div');
+      nodoTabla.className = 'listado';
+      nodoListado.appendChild(nodoTabla);
+
+      nodoPaginacion = document.createElement('div');
+      nodoPaginacion.className = 'vista__paginacion';
+      nodoListado.appendChild(nodoPaginacion);
 
       contenido.appendChild(piezasFormulario.formulario);
-      contenido.appendChild(columna);
+      contenido.appendChild(nodoListado);
       fragmento.appendChild(contenido);
 
-      pintarListado();
+      cargarListado();
+
       return fragmento;
     },
 
     alCambiarElEstado: function () {
-      return pintarListado();
+      cargarListado();
+      return true;
     }
   };
 }());

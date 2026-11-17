@@ -100,7 +100,7 @@
       return errores;
     },
 
-    /** Errores de alta de un autor antes de llamar a la API. */
+    /** Errores de alta o edición de un autor antes de llamar a la API. */
     validarAutor: function (contexto) {
       var datos = contexto || {};
       var errores = [];
@@ -112,7 +112,7 @@
       return errores;
     },
 
-    /** Errores de alta de un género antes de llamar a la API. */
+    /** Errores de alta o edición de un género antes de llamar a la API. */
     validarGenero: function (contexto) {
       var datos = contexto || {};
       var errores = [];
@@ -124,7 +124,7 @@
       return errores;
     },
 
-    /** Errores de alta de un cliente antes de llamar a la API. */
+    /** Errores de alta o edición de un cliente antes de llamar a la API. */
     validarCliente: function (contexto) {
       var datos = contexto || {};
       var errores = [];

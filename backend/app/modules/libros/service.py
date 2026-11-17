@@ -86,8 +86,13 @@ async def list_libros(
     offset: int = 0,
     titulo: Optional[str] = None,
     genero_id: Optional[int] = None,
+    incluir_inactivos: bool = False,
 ) -> List[LibroRead]:
-    """Lista libros con paginación y filtros opcionales (título y género)."""
+    """Lista libros con paginación y filtros opcionales (título y género).
+
+    Por defecto excluye las bajas lógicas; `incluir_inactivos=True` las muestra
+    para poder restaurarlas con PATCH.
+    """
     if limit < 1:
         limit = 1
     if limit > 100:
@@ -101,6 +106,8 @@ async def list_libros(
         selectinload(Libro.autorias).selectinload(LibroAutor.autor),
     )
 
+    if not incluir_inactivos:
+        query = query.where(Libro.activo.is_(True))
     if titulo:
         query = query.where(Libro.titulo.ilike(f"%{titulo}%"))
     if genero_id is not None:
@@ -113,7 +120,10 @@ async def list_libros(
 
 
 async def get_libro(session: AsyncSession, libro_id: int) -> LibroRead:
-    """Obtiene un libro por su id con carga anticipada de relaciones (sin N+1)."""
+    """Obtiene un libro por su id con carga anticipada (sin N+1).
+
+    404 si no existe o está dado de baja.
+    """
     result = await session.execute(
         select(Libro)
         .options(
@@ -121,7 +131,7 @@ async def get_libro(session: AsyncSession, libro_id: int) -> LibroRead:
             joinedload(Libro.genero),
             selectinload(Libro.autorias).selectinload(LibroAutor.autor),
         )
-        .where(Libro.id == libro_id)
+        .where(Libro.id == libro_id, Libro.activo.is_(True))
     )
     libro = result.scalar_one_or_none()
     if libro is None:
@@ -170,3 +180,14 @@ async def update_libro(
         ) from exc
 
     return await _cargar_libro(session, libro_id)
+
+
+async def delete_libro(session: AsyncSession, libro_id: int) -> None:
+    """Baja lógica de un libro (marca activo = false). 404 si no existe o ya está dado de baja."""
+    libro = await session.get(Libro, libro_id)
+    if libro is None or not libro.activo:
+        raise HTTPException(status_code=404, detail="Libro no encontrado")
+
+    libro.activo = False
+    session.add(libro)
+    await session.commit()

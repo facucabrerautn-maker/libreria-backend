@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 from fastapi import BackgroundTasks, HTTPException
 
+from app.modules.clientes.models import Cliente
 from app.modules.libros.models import Libro
 from app.modules.ventas.models import RenglonVenta, Venta
 from app.modules.ventas.schemas import VentaCreate, VentaRead
@@ -58,10 +59,18 @@ async def create_venta(
             detail="Un mismo libro no puede aparecer en dos renglones",
         )
 
+    # Un cliente dado de baja no puede comprar (aunque la fila siga existiendo).
+    cliente = await session.get(Cliente, venta_in.cliente_id)
+    if cliente is None or not cliente.activo:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Cliente con id {venta_in.cliente_id} no existe o está dado de baja",
+        )
+
     # Leer precios de los libros de la base (una consulta con IN).
-    # Es necesario para copiar el precio; si falta un libro, se responde 409.
+    # Es necesario para copiar el precio; si falta un libro activo, se responde 409.
     result_libros = await session.execute(
-        select(Libro).where(Libro.id.in_(libro_ids))
+        select(Libro).where(Libro.id.in_(libro_ids), Libro.activo.is_(True))
     )
     libros = {libro.id: libro for libro in result_libros.scalars().all()}
 
@@ -69,7 +78,7 @@ async def create_venta(
         if libro_id not in libros:
             raise HTTPException(
                 status_code=409,
-                detail=f"Libro con id {libro_id} no existe",
+                detail=f"Libro con id {libro_id} no existe o está dado de baja",
             )
 
     # Calcular total y preparar renglones con precio copiado del libro

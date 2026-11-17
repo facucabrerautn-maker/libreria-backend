@@ -28,9 +28,16 @@ async def create_genero(session: AsyncSession, genero_in: GeneroCreate) -> Gener
 
 
 async def list_generos(
-    session: AsyncSession, limit: int = 20, offset: int = 0
+    session: AsyncSession,
+    limit: int = 20,
+    offset: int = 0,
+    incluir_inactivos: bool = False,
 ) -> List[GeneroRead]:
-    """Lista géneros con paginación (limit entre 1 y 100, offset desde 0)."""
+    """Lista géneros con paginación (limit entre 1 y 100, offset desde 0).
+
+    Por defecto excluye las bajas lógicas; `incluir_inactivos=True` las muestra
+    para poder restaurarlas con PATCH.
+    """
     if limit < 1:
         limit = 1
     if limit > 100:
@@ -38,17 +45,21 @@ async def list_generos(
     if offset < 0:
         offset = 0
 
+    query = select(Genero)
+    if not incluir_inactivos:
+        query = query.where(Genero.activo.is_(True))
+
     result = await session.execute(
-        select(Genero).order_by(Genero.id).offset(offset).limit(limit)
+        query.order_by(Genero.id).offset(offset).limit(limit)
     )
     generos = result.scalars().all()
     return [GeneroRead.model_validate(g) for g in generos]
 
 
 async def get_genero(session: AsyncSession, genero_id: int) -> GeneroRead:
-    """Obtiene un género por su id. 404 si no existe."""
+    """Obtiene un género por su id. 404 si no existe o está dado de baja."""
     genero = await session.get(Genero, genero_id)
-    if genero is None:
+    if genero is None or not genero.activo:
         raise HTTPException(status_code=404, detail="Género no encontrado")
     return GeneroRead.model_validate(genero)
 
@@ -56,7 +67,11 @@ async def get_genero(session: AsyncSession, genero_id: int) -> GeneroRead:
 async def update_genero(
     session: AsyncSession, genero_id: int, genero_in: GeneroUpdate
 ) -> GeneroRead:
-    """Actualiza un género parcialmente (solo campos enviados). 409 si nombre duplica."""
+    """Actualiza un género parcialmente (solo campos enviados). 409 si nombre duplica.
+
+    Busca también las bajas lógicas para permitir restaurarlas enviando
+    `{"activo": true}`.
+    """
     genero = await session.get(Genero, genero_id)
     if genero is None:
         raise HTTPException(status_code=404, detail="Género no encontrado")
@@ -78,12 +93,23 @@ async def update_genero(
     return GeneroRead.model_validate(genero)
 
 
+async def delete_genero(session: AsyncSession, genero_id: int) -> None:
+    """Baja lógica de un género (marca activo = false). 404 si no existe o ya está dado de baja."""
+    genero = await session.get(Genero, genero_id)
+    if genero is None or not genero.activo:
+        raise HTTPException(status_code=404, detail="Género no encontrado")
+
+    genero.activo = False
+    session.add(genero)
+    await session.commit()
+
+
 async def list_libros_por_genero(
     session: AsyncSession, genero_id: int, limit: int = 20, offset: int = 0
 ) -> List[LibroResumenRead]:
-    """Lista los libros de un género. 404 si el género no existe."""
+    """Lista los libros de un género. 404 si el género no existe o está dado de baja."""
     genero = await session.get(Genero, genero_id)
-    if genero is None:
+    if genero is None or not genero.activo:
         raise HTTPException(status_code=404, detail="Género no encontrado")
 
     if limit < 1:
@@ -95,7 +121,7 @@ async def list_libros_por_genero(
 
     result = await session.execute(
         select(Libro)
-        .where(Libro.genero_id == genero_id)
+        .where(Libro.genero_id == genero_id, Libro.activo.is_(True))
         .order_by(Libro.id)
         .offset(offset)
         .limit(limit)

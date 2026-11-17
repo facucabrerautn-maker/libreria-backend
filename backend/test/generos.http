@@ -39,3 +39,23 @@ GET http://localhost:8000/generos/1/libros
 
 ### Libros de un género inexistente (404)
 GET http://localhost:8000/generos/999/libros
+
+### Listar géneros incluyendo bajas lógicas (200)
+GET http://localhost:8000/generos/?limit=10&offset=0&incluir_inactivos=true
+
+### Dar de baja un género (204, soft delete)
+DELETE http://localhost:8000/generos/1
+
+### El género dado de baja ya no se obtiene por id (404)
+GET http://localhost:8000/generos/1
+
+### Dar de baja dos veces el mismo género (404)
+DELETE http://localhost:8000/generos/1
+
+### Restaurar un género dado de baja (200, activo=true)
+PATCH http://localhost:8000/generos/1
+Content-Type: application/json
+
+{
+  "activo": true
+}

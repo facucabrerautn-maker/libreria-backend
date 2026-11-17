@@ -177,6 +177,37 @@
     return valor === null || valor === undefined ? '' : String(valor).trim();
   }
 
+  /** Cuerpo común de POST y PATCH de libro (mismos campos editables). */
+  function cuerpoLibro(libro) {
+    var datos = libro || {};
+    var cuerpo = {
+      titulo: textoRecortado(datos.titulo),
+      isbn: textoRecortado(datos.isbn),
+      precio: Number(datos.precio),
+      editorial_id: Number(datos.editorialId),
+      genero_id: datos.generoId === null || datos.generoId === '' ? null : Number(datos.generoId)
+    };
+    cuerpo[CONTRATO.campoStock] = Number(datos.stock);
+    cuerpo[CONTRATO.campoAutores] = (datos.autores || []).map(function (autoria) {
+      return {
+        autor_id: Number(autoria.autorId),
+        rol: autoria.rol || 'autor',
+        orden: Number(autoria.orden) || 1
+      };
+    });
+    return cuerpo;
+  }
+
+  /** Petición DELETE normalizada (204 sin cuerpo). */
+  function eliminar(ruta) {
+    return pedir(url(ruta), { metodo: 'DELETE' });
+  }
+
+  /** Restaura una baja lógica con PATCH { activo: true }. */
+  function restaurar(ruta) {
+    return pedir(url(ruta), { metodo: 'PATCH', cuerpo: { activo: true } });
+  }
+
   window.Libreria.api = {
     CONTRATO: CONTRATO,
     idNumerico: idNumerico,
@@ -190,7 +221,8 @@
       var destino = conParametros(url('libros/'), {
         titulo: ajustes.titulo,
         limit: ajustes.limit === undefined ? CONTRATO.limite : ajustes.limit,
-        offset: ajustes.offset === undefined ? 0 : ajustes.offset
+        offset: ajustes.offset === undefined ? 0 : ajustes.offset,
+        incluir_inactivos: ajustes.incluirInactivos ? 'true' : ''
       });
       var resultado = await pedir(destino);
       if (!resultado.ok) {
@@ -206,23 +238,25 @@
 
     /** POST /libros/ con stock, género opcional y al menos una autoría. */
     crearLibro: function (libro) {
-      var datos = libro || {};
-      var cuerpo = {
-        titulo: datos.titulo,
-        isbn: datos.isbn,
-        precio: Number(datos.precio),
-        editorial_id: Number(datos.editorialId),
-        genero_id: datos.generoId === null ? null : Number(datos.generoId)
-      };
-      cuerpo[CONTRATO.campoStock] = Number(datos.stock);
-      cuerpo[CONTRATO.campoAutores] = (datos.autores || []).map(function (autoria) {
-        return {
-          autor_id: Number(autoria.autorId),
-          rol: autoria.rol || 'autor',
-          orden: Number(autoria.orden) || 1
-        };
+      return pedir(url('libros/'), { metodo: 'POST', cuerpo: cuerpoLibro(libro) });
+    },
+
+    /** PATCH /libros/{id}: actualiza los campos editables (incluye activo al restaurar). */
+    actualizarLibro: function (id, libro) {
+      return pedir(url('libros/' + encodeURIComponent(id)), {
+        metodo: 'PATCH',
+        cuerpo: cuerpoLibro(libro)
       });
-      return pedir(url('libros/'), { metodo: 'POST', cuerpo: cuerpo });
+    },
+
+    /** DELETE /libros/{id}: baja lógica. */
+    eliminarLibro: function (id) {
+      return eliminar('libros/' + encodeURIComponent(id));
+    },
+
+    /** PATCH /libros/{id} con activo=true: restaura la baja lógica. */
+    restaurarLibro: function (id) {
+      return restaurar('libros/' + encodeURIComponent(id));
     },
 
     /* --------------------------- Catálogos ---------------------------- */
@@ -243,7 +277,8 @@
       var ajustes = opciones || {};
       var destino = conParametros(url('generos/'), {
         limit: ajustes.limit === undefined ? 100 : ajustes.limit,
-        offset: ajustes.offset === undefined ? 0 : ajustes.offset
+        offset: ajustes.offset === undefined ? 0 : ajustes.offset,
+        incluir_inactivos: ajustes.incluirInactivos ? 'true' : ''
       });
       var resultado = await pedir(destino);
       if (!resultado.ok) {
@@ -257,7 +292,8 @@
       var ajustes = opciones || {};
       var destino = conParametros(url('autores/'), {
         limit: ajustes.limit === undefined ? CONTRATO.limite : ajustes.limit,
-        offset: ajustes.offset === undefined ? 0 : ajustes.offset
+        offset: ajustes.offset === undefined ? 0 : ajustes.offset,
+        incluir_inactivos: ajustes.incluirInactivos ? 'true' : ''
       });
       var resultado = await pedir(destino);
       if (!resultado.ok) {
@@ -279,6 +315,29 @@
       });
     },
 
+    /** PATCH /autores/{id}: actualiza nombre y nacionalidad. */
+    actualizarAutor: function (id, autor) {
+      var datos = autor || {};
+      var nacionalidad = textoRecortado(datos.nacionalidad);
+      return pedir(url('autores/' + encodeURIComponent(id)), {
+        metodo: 'PATCH',
+        cuerpo: {
+          nombre: textoRecortado(datos.nombre),
+          nacionalidad: nacionalidad === '' ? null : nacionalidad
+        }
+      });
+    },
+
+    /** DELETE /autores/{id}: baja lógica. */
+    eliminarAutor: function (id) {
+      return eliminar('autores/' + encodeURIComponent(id));
+    },
+
+    /** PATCH /autores/{id} con activo=true: restaura la baja lógica. */
+    restaurarAutor: function (id) {
+      return restaurar('autores/' + encodeURIComponent(id));
+    },
+
     /** POST /generos/: el nombre es único (409 si ya existe). */
     crearGenero: function (genero) {
       var datos = genero || {};
@@ -288,12 +347,46 @@
       });
     },
 
+    /** PATCH /generos/{id}: actualiza el nombre. */
+    actualizarGenero: function (id, genero) {
+      var datos = genero || {};
+      return pedir(url('generos/' + encodeURIComponent(id)), {
+        metodo: 'PATCH',
+        cuerpo: { nombre: textoRecortado(datos.nombre) }
+      });
+    },
+
+    /** DELETE /generos/{id}: baja lógica. */
+    eliminarGenero: function (id) {
+      return eliminar('generos/' + encodeURIComponent(id));
+    },
+
+    /** PATCH /generos/{id} con activo=true: restaura la baja lógica. */
+    restaurarGenero: function (id) {
+      return restaurar('generos/' + encodeURIComponent(id));
+    },
+
     /** GET /autores/{id}: nombre del autor antes de agregarlo a un libro. */
     obtenerAutor: function (id) {
       return pedir(url('autores/' + encodeURIComponent(id)));
     },
 
     /* ---------------------------- Clientes ---------------------------- */
+
+    /** GET /clientes/ con paginación limit/offset. */
+    listarClientes: async function (opciones) {
+      var ajustes = opciones || {};
+      var destino = conParametros(url('clientes/'), {
+        limit: ajustes.limit === undefined ? CONTRATO.limite : ajustes.limit,
+        offset: ajustes.offset === undefined ? 0 : ajustes.offset,
+        incluir_inactivos: ajustes.incluirInactivos ? 'true' : ''
+      });
+      var resultado = await pedir(destino);
+      if (!resultado.ok) {
+        return resultado;
+      }
+      return { ok: true, estado: resultado.estado, datos: normalizarLista(resultado.datos) };
+    },
 
     /** POST /clientes/ */
     crearCliente: function (cliente) {
@@ -304,7 +397,26 @@
       });
     },
 
-    /** GET /clientes/{id}: el backend solo expone la consulta individual. */
+    /** PATCH /clientes/{id}: actualiza nombre y email. */
+    actualizarCliente: function (id, cliente) {
+      var datos = cliente || {};
+      return pedir(url('clientes/' + encodeURIComponent(id)), {
+        metodo: 'PATCH',
+        cuerpo: { nombre: datos.nombre, email: datos.email }
+      });
+    },
+
+    /** DELETE /clientes/{id}: baja lógica. */
+    eliminarCliente: function (id) {
+      return eliminar('clientes/' + encodeURIComponent(id));
+    },
+
+    /** PATCH /clientes/{id} con activo=true: restaura la baja lógica. */
+    restaurarCliente: function (id) {
+      return restaurar('clientes/' + encodeURIComponent(id));
+    },
+
+    /** GET /clientes/{id}: consulta individual. */
     obtenerCliente: function (id) {
       return pedir(url('clientes/' + encodeURIComponent(id)));
     },

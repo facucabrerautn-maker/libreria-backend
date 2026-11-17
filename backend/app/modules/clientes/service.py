@@ -43,12 +43,41 @@ async def create_cliente(session: AsyncSession, cliente_in: ClienteCreate) -> Cl
     return ClienteRead.model_validate(cliente_con_perfil)
 
 
+async def list_clientes(
+    session: AsyncSession,
+    limit: int = 20,
+    offset: int = 0,
+    incluir_inactivos: bool = False,
+) -> List[ClienteRead]:
+    """Lista clientes con su perfil y paginación.
+
+    Por defecto excluye las bajas lógicas; `incluir_inactivos=True` las muestra
+    para poder restaurarlas con PATCH.
+    """
+    if limit < 1:
+        limit = 1
+    if limit > 100:
+        limit = 100
+    if offset < 0:
+        offset = 0
+
+    query = select(Cliente).options(joinedload(Cliente.perfil))
+    if not incluir_inactivos:
+        query = query.where(Cliente.activo.is_(True))
+
+    result = await session.execute(
+        query.order_by(Cliente.id).offset(offset).limit(limit)
+    )
+    clientes = result.scalars().all()
+    return [ClienteRead.model_validate(c) for c in clientes]
+
+
 async def get_cliente(session: AsyncSession, cliente_id: int) -> ClienteRead:
-    """Obtiene un cliente por su id con su perfil (carga anticipada)."""
+    """Obtiene un cliente por su id con su perfil (404 si no existe o está dado de baja)."""
     result = await session.execute(
         select(Cliente)
         .options(joinedload(Cliente.perfil))
-        .where(Cliente.id == cliente_id)
+        .where(Cliente.id == cliente_id, Cliente.activo.is_(True))
     )
     cliente = result.scalar_one_or_none()
     if cliente is None:
@@ -59,7 +88,11 @@ async def get_cliente(session: AsyncSession, cliente_id: int) -> ClienteRead:
 async def update_cliente(
     session: AsyncSession, cliente_id: int, cliente_in: ClienteUpdate
 ) -> ClienteRead:
-    """Actualiza un cliente parcialmente (solo campos enviados)."""
+    """Actualiza un cliente parcialmente (solo campos enviados).
+
+    Busca también las bajas lógicas para permitir restaurarlas enviando
+    `{"activo": true}`.
+    """
     result = await session.execute(
         select(Cliente)
         .options(joinedload(Cliente.perfil))
@@ -93,12 +126,23 @@ async def update_cliente(
     return ClienteRead.model_validate(cliente_con_perfil)
 
 
+async def delete_cliente(session: AsyncSession, cliente_id: int) -> None:
+    """Baja lógica de un cliente (marca activo = false). 404 si no existe o ya está dado de baja."""
+    cliente = await session.get(Cliente, cliente_id)
+    if cliente is None or not cliente.activo:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+
+    cliente.activo = False
+    session.add(cliente)
+    await session.commit()
+
+
 async def create_perfil_cliente(
     session: AsyncSession, cliente_id: int, perfil_in: PerfilCreate
 ) -> PerfilRead:
-    """Crea un perfil para un cliente. 404 si el cliente no existe, 409 si ya tiene perfil."""
+    """Crea un perfil para un cliente. 404 si el cliente no existe o está dado de baja."""
     cliente = await session.get(Cliente, cliente_id)
-    if cliente is None:
+    if cliente is None or not cliente.activo:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
 
     # El UNIQUE en perfil_cliente.cliente_id garantiza que no haya dos perfiles.
@@ -125,7 +169,7 @@ async def list_ventas_por_cliente(
 ) -> List[VentaRead]:
     """Obtiene las ventas de un cliente con carga anticipada y paginación."""
     cliente = await session.get(Cliente, cliente_id)
-    if cliente is None:
+    if cliente is None or not cliente.activo:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
 
     if limit < 1:

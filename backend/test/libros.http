@@ -113,3 +113,23 @@ Content-Type: application/json
 
 ### Búsqueda por título con intento de inyección (200 con lista vacía) - Caso C-08
 GET http://localhost:8000/libros/?titulo=%27%20OR%20%271%27%3D%271
+
+### Listar libros incluyendo bajas lógicas (200)
+GET http://localhost:8000/libros/?limit=10&offset=0&incluir_inactivos=true
+
+### Dar de baja un libro (204, soft delete)
+DELETE http://localhost:8000/libros/1
+
+### El libro dado de baja ya no se obtiene por id (404)
+GET http://localhost:8000/libros/1
+
+### Dar de baja dos veces el mismo libro (404)
+DELETE http://localhost:8000/libros/1
+
+### Restaurar un libro dado de baja (200, activo=true)
+PATCH http://localhost:8000/libros/1
+Content-Type: application/json
+
+{
+  "activo": true
+}

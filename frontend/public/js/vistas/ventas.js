@@ -308,6 +308,7 @@
       piezasFormulario.fijarClientes(window.Libreria.estado.listarClientes(), borrador.clienteId);
       pintarBorrador();
 
+      apiListarClientes();
       apiListarLibros();
 
       return fragmento;
@@ -317,6 +318,36 @@
       return pintarBorrador();
     }
   };
+
+  /*
+   * Carga los clientes activos desde GET /clientes/ para que el selector sea
+   * usable sin haber visitado antes la vista Clientes. La baja lógica los
+   * excluye del listado: un cliente dado de baja no se puede elegir para vender.
+   */
+  async function apiListarClientes() {
+    var ui = window.Libreria.ui;
+    var resultado = await window.Libreria.api.listarClientes({ limit: 100, offset: 0 });
+    if (!resultado.ok) {
+      piezasFormulario.avisoCliente(
+        'No se pudieron cargar los clientes: ' + ui.mensajeDeApi(resultado),
+        'error'
+      );
+      return;
+    }
+
+    window.Libreria.estado.fijarClientes(resultado.datos.items);
+
+    var borrador = window.Libreria.estado.borrador();
+    piezasFormulario.fijarClientes(window.Libreria.estado.listarClientes(), borrador.clienteId);
+    pintarBorrador();
+
+    if (resultado.datos.items.length === 0) {
+      piezasFormulario.avisoCliente(
+        'No hay clientes activos: cargá uno desde la vista Clientes antes de vender.',
+        'vacio'
+      );
+    }
+  }
 
   async function apiListarLibros() {
     var ui = window.Libreria.ui;

@@ -146,6 +146,22 @@
   min-width: 0;
 }
 
+/* Filtros del listado (por ejemplo, «Mostrar dados de baja»). */
+.listado__filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-3);
+  align-items: center;
+}
+
+.casilla {
+  display: inline-flex;
+  gap: var(--espacio-2);
+  align-items: center;
+  font-size: var(--tamano-texto-sm);
+  color: var(--color-texto-suave);
+}
+
 /* Listados de libros, autores, géneros y clientes: título de sección y tabla
    apilados con aire. */
 .vista-libros__listado,
@@ -262,36 +278,37 @@
 
 /* Listado de libros: si no entra a lo ancho, scrollea dentro de su caja. */
 .tabla-libros {
-  min-width: 40rem;
+  min-width: 52rem;
 }
 
-.tabla-libros th:last-child,
-.tabla-libros td:last-child {
+/* La columna de stock (6.ª) se alinea a la derecha como los importes. */
+.tabla-libros th:nth-child(6),
+.tabla-libros td:nth-child(6) {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-/* Listado de clientes: dos columnas legibles; si no entra, scrollea adentro. */
+/* Listado de clientes: columnas legibles; si no entra, scrollea adentro. */
 .tabla-clientes {
-  min-width: 22rem;
+  min-width: 32rem;
 }
 
 .tabla-clientes td {
   overflow-wrap: anywhere;
 }
 
-/* Listado de autores: tres columnas; si no entra, scrollea adentro. */
+/* Listado de autores: columnas legibles; si no entra, scrollea adentro. */
 .tabla-autores {
-  min-width: 30rem;
+  min-width: 38rem;
 }
 
 .tabla-autores td {
   overflow-wrap: anywhere;
 }
 
-/* Listado de géneros: dos columnas cortas. */
+/* Listado de géneros: columnas cortas más estado y acciones. */
 .tabla-generos {
-  min-width: 18rem;
+  min-width: 26rem;
 }
 
 .tabla-generos td {
